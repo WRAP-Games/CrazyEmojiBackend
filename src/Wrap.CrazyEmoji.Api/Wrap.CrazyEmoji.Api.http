@@ -1,0 +1,6 @@
+@Wrap.CrazyEmoji.Api_HostAddress = http://localhost:5026
+
+GET {{Wrap.CrazyEmoji.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
