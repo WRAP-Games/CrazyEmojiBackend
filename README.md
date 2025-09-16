@@ -56,3 +56,26 @@ The game supports multiple categories, leaderboards, and player profiles, making
 1. **Backend**: ASP.NET
 2. **FrontEnd**: Angular + TypeScript
 3. **Database**: MySql
+
+
+# Branch Naming Rules
+
+## Pattern:
+
+`[initials]/[issueNumber]_[ShortTitle]_BasedOnMain`
+
+*Example:*<br>
+**Developer:** Rokas Braidokas<br>
+**Issue:** #8<br>
+**Task:** Rules for branches
+
+*Branch name:*
+`rb/8_RulesForBranches_BasedOnMain`
+
+## Rules:
+
+1. **Initials:** Your initials go first (rb for Rokas Braidokas).
+2. **Issue Number:** Add the number of the issue (8).
+3. **Short Title:** A simplified descriptive title (RulesForBranches).
+4. **Base Branch:** Always indicate it is based on main (BasedOnMain).
+5. **Format:** Use / to separate initials from the rest, _ for other parts.
