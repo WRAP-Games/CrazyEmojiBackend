@@ -1,19 +1,23 @@
 # Main Info
+
 ## Team Members:
-- Rokas Braidokas
-- Aistė Aškinytė
-- Patricija Bietaitė
-- Vėjūnė Kamienaitė
-- Vilius Kazlauskas
+
+- Rokas Braidokas - _MaRokas2005_
+- Aistė Aškinytė. - _aisteaskinyte_
+- Patricija Bietaitė - _PatricijaBt_
+- Vėjūnė Kamienaitė - _Vejkam_
+- Vilius Kazlauskas - _Vilius-K_
 
 Team Name: **WRAP** \
 Game Name: **Crazy Emoji** \
 Lead Developer: **Rokas**
 
-----
+---
 
 # MVP:
+
 ## Alfa Version:
+
 1. Room Is Created
 2. Roles Are Assigned
 3. The Selected Player Receives a Word and a Set of Emojis
@@ -23,12 +27,14 @@ Lead Developer: **Rokas**
 7. The Selected Player Marks the Correct Guesses
 
 ## Beta:
+
 1. Login/Registration
 2. Player Profile
 3. Leaderboard
 4. Timers for Setting Emojis and Guessing
 
 ## Final:
+
 1. Multiple Categories
 2. Player Who Answers Correctly and Faster Gets More Points
 3. Nice user Interface
@@ -36,6 +42,7 @@ Lead Developer: **Rokas**
 ---
 
 # Tech Stack
+
 1. **Backend**: ASP.NET
 2. **FrontEnd**: Angular + TypeScript
 3. **Database**: MySql
