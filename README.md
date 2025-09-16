@@ -57,6 +57,7 @@ The game supports multiple categories, leaderboards, and player profiles, making
 2. **FrontEnd**: Angular + TypeScript
 3. **Database**: MySql
 
+---
 
 # Branch Naming Rules
 
