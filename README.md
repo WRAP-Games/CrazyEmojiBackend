@@ -3,7 +3,7 @@
 ## Team Members:
 
 - Rokas Braidokas - _MaRokas2005_
-- Aistė Aškinytė. - _aisteaskinyte_
+- Aistė Aškinytė - _aisteaskinyte_
 - Patricija Bietaitė - _PatricijaBt_
 - Vėjūnė Kamienaitė - _Vejkam_
 - Vilius Kazlauskas - _Vilius-K_
@@ -11,6 +11,16 @@
 Team Name: **WRAP** \
 Game Name: **Crazy Emoji** \
 Lead Developer: **Rokas**
+
+---
+
+# Project Description
+
+Crazy Emoji is a collaborative online party game inspired by charades where players describe words using only emojis. The goal is to entertain by bringing people together in real-time game rooms where creativity and quick thinking matter.
+
+In each round, one player is assigned a secret word and a set of emojis. That player chooses emojis to represent the word, while the rest of the players try to guess it. Points are awarded to players who guess correctly — with extra points for faster guesses.
+
+The game supports multiple categories, leaderboards, and player profiles, making it a social and replayable experience. Crazy Emoji is designed to be easy to join, engaging and fun to play in groups.
 
 ---
 
