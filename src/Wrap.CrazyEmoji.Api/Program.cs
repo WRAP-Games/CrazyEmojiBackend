@@ -1,12 +1,15 @@
 using System.Runtime.CompilerServices;
+using Serilog;
+using Wrap.CrazyEmoji.Api.Bootstraps;
+using Wrap.CrazyEmoji.Api.Extensions;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
 try
 {
-    var builder = WebApplication.CreateBuilder(args);
-
-    // Add services to the container.
+    var builder = WebApplication
+        .CreateBuilder(args)
+        .SetupObservability();
 
     builder.Services.AddControllers();
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -14,27 +17,29 @@ try
 
     var app = builder.Build();
 
-    // Configure the HTTP request pipeline.
-    if (app.Environment.IsDevelopment())
+    Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
+
+    app.SetupWebApplication();
+
+    app.Lifetime.ApplicationStarted.Register(() =>
     {
-        app.MapOpenApi();
-    }
+        Log.Information("Application is starting up.");
+    });
 
-    app.UseHttpsRedirection();
-
-    app.UseAuthorization();
-
-    app.MapControllers();
+    app.Lifetime.ApplicationStopped.Register(() =>
+    {
+        Log.Information("Application is shutting down.");
+    });
 
     app.Run();
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"An error occurred: {ex.Message}");
+    Log.Fatal(ex, "Failed to start application.");
 }
 finally
 {
-    Console.WriteLine("Application is shutting down.");
+    Log.CloseAndFlush();
 }
 
 public partial class Program { }
