@@ -80,3 +80,17 @@ The game supports multiple categories, leaderboards, and player profiles, making
 3. **Short Title:** A simplified descriptive title (RulesForBranches).
 4. **Base Branch:** Always indicate it is based on main (BasedOnMain).
 5. **Format:** Use / to separate initials from the rest, _ for other parts.
+
+---
+
+# Code Formatting
+
+### Visual Studio 2026 Insiders & Visual Studio 2022
+- Go to **Tools** -> **Options** -> **Text Editor** -> **Code Cleanup**
+- Press On **Configure Code Cleanup**
+- Make Sure That **Profile 1** *(or **Profile 2**)* Have These Selected Fixers:
+  - **Format document**
+  - **Remove unnecessary imports or usings**
+  - **Sort imports or usings**
+  - **Apply file header preferences**
+- Then Select **Profile 1** *(or **Profile 2**)* to Run on Save
