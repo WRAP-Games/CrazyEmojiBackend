@@ -15,6 +15,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Wrap.CrazyEmoji.Api\Wrap.CrazyEmoji.Api.csproj" />
+    <ProjectReference Include="..\..\src\Wrap.CrazyEmoji.Shared\Wrap.CrazyEmoji.Shared.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
