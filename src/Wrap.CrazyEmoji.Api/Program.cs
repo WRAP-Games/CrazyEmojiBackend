@@ -45,7 +45,6 @@ try
     }
     
     
-
     app.Lifetime.ApplicationStarted.Register(() =>
     {
         Log.Information("Application is starting up.");
