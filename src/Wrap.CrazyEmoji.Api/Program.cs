@@ -11,9 +11,7 @@ using Microsoft.AspNetCore.Hosting.Server.Features;
 
 try
 {
-    var builder = WebApplication
-        .CreateBuilder(args)
-        .SetupObservability();
+    var builder = WebApplication.CreateBuilder(args).SetupObservability();
 
     builder.Services.AddControllers();
     
@@ -32,7 +30,7 @@ try
     var app = builder.Build();
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
-
+    
     app.SetupWebApplication();
 
     //creates the openAPI json file

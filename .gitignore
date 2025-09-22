@@ -58,6 +58,13 @@ dlldata.c
 # Benchmark Results
 BenchmarkDotNet.Artifacts/
 
+# Ignore IDE folder
+.idea/
+
+# Ignore generated Swagger JSON files
+swagger.json
+live.json
+
 # .NET Core
 project.lock.json
 project.fragment.lock.json
