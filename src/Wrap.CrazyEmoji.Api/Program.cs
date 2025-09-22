@@ -16,9 +16,19 @@ try
         .SetupObservability();
 
     builder.Services.AddControllers();
-    // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-    builder.Services.AddOpenApi();
-
+    
+    //swagger services
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen(c =>
+    {
+        c.SwaggerDoc("v1", new OpenApiInfo()
+        {
+            Title = "CrazyEmoji API",
+            Version = "v1",
+            Description = "CrazyEmoji API"
+        });
+    });
+    
     var app = builder.Build();
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
