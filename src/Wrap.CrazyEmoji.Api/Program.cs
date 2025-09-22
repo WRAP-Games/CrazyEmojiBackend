@@ -36,7 +36,6 @@ try
     //creates the openAPI json file
     if (builder.Environment.IsDevelopment())
     {
-        
         app.UseSwagger();
         app.UseSwaggerUI(c =>
         {
