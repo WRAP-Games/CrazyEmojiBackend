@@ -35,6 +35,20 @@ try
 
     app.SetupWebApplication();
 
+    //creates the openAPI json file
+    if (builder.Environment.IsDevelopment())
+    {
+        
+        app.UseSwagger();
+        app.UseSwaggerUI(c =>
+        {
+            c.SwaggerEndpoint("/swagger/v1/swagger.json", "CrazyEmoji API v1");
+            c.RoutePrefix = string.Empty;
+        });
+    }
+    
+    
+
     app.Lifetime.ApplicationStarted.Register(() =>
     {
         Log.Information("Application is starting up.");
