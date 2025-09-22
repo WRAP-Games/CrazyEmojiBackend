@@ -28,8 +28,9 @@ dotnet_search_reference_assemblies = true
 #### .NET Coding Conventions ####
 
 # Organize usings
+dotnet_diagnostic.IDE0005.severity = error
 dotnet_separate_import_directive_groups = false
-dotnet_sort_system_directives_first = false
+dotnet_sort_system_directives_first = true
 file_header_template = unset
 
 # this. and Me. preferences

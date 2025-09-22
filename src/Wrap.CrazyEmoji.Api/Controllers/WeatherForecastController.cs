@@ -4,7 +4,7 @@ namespace Wrap.CrazyEmoji.Api.Controllers;
 
 [ApiController]
 [Route("[controller]")]
-public class WeatherForecastController(ILogger<WeatherForecastController> logger) : 
+public class WeatherForecastController(ILogger<WeatherForecastController> logger) :
     ControllerBase
 {
     private static readonly string[] Summaries =
