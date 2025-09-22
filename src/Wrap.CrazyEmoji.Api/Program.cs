@@ -2,7 +2,6 @@ using System.Runtime.CompilerServices;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
-using Wrap.CrazyEmoji.Api.Middleware;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
@@ -21,8 +20,6 @@ try
     var app = builder.Build();
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
-
-    app.UseMiddleware<GlobalExceptionMiddleware>();
 
     app.SetupWebApplication();
 
