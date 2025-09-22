@@ -3,6 +3,9 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
