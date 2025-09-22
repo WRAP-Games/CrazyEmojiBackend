@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.OpenApi.Models;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
