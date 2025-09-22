@@ -52,6 +52,33 @@ try
     app.Lifetime.ApplicationStarted.Register(() =>
     {
         Log.Information("Application is starting up.");
+        
+        //saves json file
+            try
+            {
+                
+                using var client = new HttpClient();
+                var swaggerJson = client.GetStringAsync("http://localhost:5026/swagger/v1/swagger.json").GetAwaiter().GetResult();                
+                File.WriteAllText("swagger.json", swaggerJson);
+                Log.Information("Swagger JSON OpenAPI saved to swagger.json (fetched via HTTP)");
+
+            }
+            catch (Exception e)
+            {
+                Log.Warning(e, "Failed to save swagger.json");
+            }
+            
+        var serverAddressesFeature = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>();
+
+        //gets the url for swagger json openAPI upon starting
+        if (serverAddressesFeature != null)
+        {
+            foreach (var address in serverAddressesFeature.Addresses)
+            {
+                var swaggerUrl = $"{address}/swagger/v1/swagger.json";
+                Log.Information("Swagger JSON OpenAPI available at {SwaggerUrl}", swaggerUrl);            }
+        }
+        
     });
 
     app.Lifetime.ApplicationStopped.Register(() =>
