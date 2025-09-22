@@ -7,11 +7,13 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
+    private readonly IWebHostEnvironment _env;
 
-    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger)
+    public GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExceptionMiddleware> logger, IWebHostEnvironment env)
     {
         _next = next;
         _logger = logger;
+        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -22,24 +24,33 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception exception)
         {
-            _logger.LogError(exception, "Unhandled exception caught by global handler. Path: {Path}", context.Request.Path);
-            await HandleExceptionAsync(context, exception);
+            var traceId = context.TraceIdentifier;
+            _logger.LogError(exception, "Unhandled exception caught by global handler. Method: {Method}, Path: {Path}, TraceId: {TraceId}", context.Request.Method, context.Request.Path, traceId);
+            await HandleExceptionAsync(context, exception, traceId);
         }
     }
 
-    private static Task HandleExceptionAsync(HttpContext context, Exception exception)
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception, string traceId)
     {
-        HttpStatusCode statusCode = HttpStatusCode.InternalServerError;
+        HttpStatusCode statusCode = exception switch
+        {
+            ArgumentException => HttpStatusCode.BadRequest,
+            KeyNotFoundException => HttpStatusCode.NotFound,
+            UnauthorizedAccessException => HttpStatusCode.Unauthorized,
+            _ => HttpStatusCode.InternalServerError
+        };
 
         var errorResponse = new
         {
             errorMessage = "An unexpected error occurred.",
-            detail = exception.Message
+            detail = _env.IsDevelopment() ? exception.Message : null,
+            stackTrace = _env.IsDevelopment() ? exception.StackTrace : null,
+            traceId
         };
 
         var result = JsonSerializer.Serialize(errorResponse);
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = (int)statusCode;
-        return context.Response.WriteAsync(result);
+        await context.Response.WriteAsync(result);
     }
 }
