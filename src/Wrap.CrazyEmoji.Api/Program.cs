@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
+using Wrap.CrazyEmoji.Api.Infrastructure;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
@@ -13,9 +14,11 @@ try
 
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services
+        .AddExceptionHandler<GlobalExceptionHandler>()
+        .AddProblemDetails()
         .AddOpenApi()
-        .AddControllers()
-        .RegisterMapster();
+        .RegisterMapster()
+        .AddControllers();
 
     var app = builder.Build();
 

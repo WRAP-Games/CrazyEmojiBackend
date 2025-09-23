@@ -10,10 +10,9 @@ internal static class WebApplicationExtensions
         {
             app.MapOpenApi();
             app.MapScalarApiReference("/docs");
-            
-
         }
 
+        app.UseExceptionHandler();
         app.UseHttpsRedirection();
         app.MapControllers();
 
