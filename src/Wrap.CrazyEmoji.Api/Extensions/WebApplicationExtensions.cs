@@ -1,4 +1,6 @@
-﻿namespace Wrap.CrazyEmoji.Api.Extensions;
+﻿using Scalar.AspNetCore;
+
+namespace Wrap.CrazyEmoji.Api.Extensions;
 
 internal static class WebApplicationExtensions
 {
@@ -7,6 +9,9 @@ internal static class WebApplicationExtensions
         if (!app.Environment.IsProduction())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference("/docs");
+            
+
         }
 
         app.UseHttpsRedirection();
