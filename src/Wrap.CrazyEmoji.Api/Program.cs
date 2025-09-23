@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
+using Wrap.CrazyEmoji.Api.Infrastructure;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
@@ -16,6 +17,9 @@ try
         .AddOpenApi()
         .AddControllers()
         .RegisterMapster();
+
+    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+    builder.Services.AddProblemDetails();
 
     var app = builder.Build();
 

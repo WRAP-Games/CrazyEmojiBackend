@@ -6,8 +6,6 @@ internal static class WebApplicationExtensions
 {
     internal static WebApplication SetupWebApplication(this WebApplication app)
     {
-        app.UseMiddleware<GlobalExceptionMiddleware>();
-
         if (!app.Environment.IsProduction())
         {
             app.MapOpenApi();
@@ -15,6 +13,8 @@ internal static class WebApplicationExtensions
             
 
         }
+
+        app.UseExceptionHandler();
 
         app.UseHttpsRedirection();
         app.MapControllers();
