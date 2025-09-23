@@ -1,4 +1,6 @@
-﻿namespace Wrap.CrazyEmoji.Api.Extensions;
+﻿using Scalar.AspNetCore;
+
+namespace Wrap.CrazyEmoji.Api.Extensions;
 
 internal static class WebApplicationExtensions
 {
