@@ -7,10 +7,18 @@ using Wrap.CrazyEmoji.Api.Extensions;
 
 try
 {
+    var allowSpecificOrigins = "_allowSpecificOrigins";
     var builder = WebApplication
         .CreateBuilder(args)
         .SetupObservability();
-
+    
+    builder.Services.AddCors(options => {
+        options.AddPolicy(name: allowSpecificOrigins, policy => {
+            policy.WithOrigins("http://localhost:4200/")
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+    });
     builder.Services.AddControllers();
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services.AddOpenApi();
@@ -30,6 +38,8 @@ try
     {
         Log.Information("Application is shutting down.");
     });
+
+    app.UseCors(allowSpecificOrigins);
 
     app.Run();
 }
