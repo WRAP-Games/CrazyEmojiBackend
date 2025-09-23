@@ -9,6 +9,9 @@ internal static class WebApplicationExtensions
         if (!app.Environment.IsProduction())
         {
             app.MapOpenApi();
+            app.MapScalarApiReference("/docs");
+            
+
         }
 
         app.UseHttpsRedirection();
