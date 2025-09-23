@@ -14,8 +14,8 @@ try
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services
         .AddOpenApi()
-        .RegisterMapster()
-        .AddControllers();
+        .AddControllers()
+        .RegisterMapster();
 
     var app = builder.Build();
 
