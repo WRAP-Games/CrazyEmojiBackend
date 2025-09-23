@@ -14,12 +14,11 @@ try
 
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services
+        .AddExceptionHandler<GlobalExceptionHandler>()
+        .AddProblemDetails()
         .AddOpenApi()
-        .AddControllers()
-        .RegisterMapster();
-
-    builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-    builder.Services.AddProblemDetails();
+        .RegisterMapster()
+        .AddControllers();
 
     var app = builder.Build();
 

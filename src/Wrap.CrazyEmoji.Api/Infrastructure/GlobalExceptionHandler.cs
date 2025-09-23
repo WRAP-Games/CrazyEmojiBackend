@@ -9,12 +9,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken cancellationToken)
     {
         logger.LogError(exception, "Unhandled exception caught by global handler: {ExceptionMessage}", exception.Message);
-        await HandleExceptionAsync(context, cancellationToken);
-        return true;
-    }
-
-    private static async Task HandleExceptionAsync(HttpContext context, CancellationToken cancellationToken)
-    {
+        
         context.Response.ContentType = "application/problem+json";
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
@@ -26,5 +21,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
         };
 
         await context.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+
+        return true;
     }
 }
