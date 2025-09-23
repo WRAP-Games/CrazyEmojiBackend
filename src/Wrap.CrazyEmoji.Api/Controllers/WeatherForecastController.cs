@@ -22,10 +22,4 @@ public class WeatherForecastController(ILogger<WeatherForecastController> logger
             Summary = Summaries[Random.Shared.Next(Summaries.Length)]
         });
     }
-
-    [HttpGet("test-error")]
-    public IActionResult TestError()
-    {
-        throw new Exception("This is a test exception for IExceptionHandler.");
-    }
 }
