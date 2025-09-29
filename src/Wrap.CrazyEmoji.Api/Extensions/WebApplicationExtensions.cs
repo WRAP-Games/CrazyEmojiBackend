@@ -12,6 +12,7 @@ internal static class WebApplicationExtensions
             app.MapScalarApiReference("/docs");
         }
 
+        app.UseCorrelationId();
         app.UseExceptionHandler();
         app.UseHttpsRedirection();
         app.MapControllers();

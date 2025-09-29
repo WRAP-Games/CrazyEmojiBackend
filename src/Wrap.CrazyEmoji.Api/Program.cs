@@ -24,6 +24,8 @@ try
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
 
+    app.UseMiddleware<Wrap.CrazyEmoji.Api.Middlewares.CorrelationIdMiddleware>();
+    
     app.SetupWebApplication();
 
     app.Lifetime.ApplicationStarted.Register(() =>
