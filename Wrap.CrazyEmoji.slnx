@@ -8,5 +8,6 @@
     <Project Path="tests/Wrap.CrazyEmoji.IntegrationTests/Wrap.CrazyEmoji.IntegrationTests.csproj" Id="dc24e580-896c-494f-bda1-37473b6868ae" />
   </Folder>
   <Project Path="src/Wrap.CrazyEmoji.Api/Wrap.CrazyEmoji.Api.csproj" />
+  <Project Path="src/Wrap.CrazyEmoji.Console/Wrap.CrazyEmoji.Console.csproj" />
   <Project Path="src/Wrap.CrazyEmoji.Shared/Wrap.CrazyEmoji.Shared.csproj" Id="14bb29bc-8f76-4531-8fd3-c86bd9140f7c" />
 </Solution>
