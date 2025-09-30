@@ -13,7 +13,7 @@ internal static class WebApplicationExtensions
             app.MapScalarApiReference("/docs");
         }
 
-        app.UseCorrelationId();
+        app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseExceptionHandler();
         app.UseHttpsRedirection();
         app.MapControllers();
@@ -21,8 +21,4 @@ internal static class WebApplicationExtensions
         return app;
     }
     
-    internal static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app)
-    {
-        return app.UseMiddleware<CorrelationIdMiddleware>();
-    }
 }
