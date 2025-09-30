@@ -18,8 +18,12 @@ public class CorrelationIdMiddleware
     {
         if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out var correlationId))
         {
-            correlationId = Guid.NewGuid().ToString();
-            context.Request.Headers[CorrelationIdHeader] = correlationId;
+            if (correlationIds.Count > 1)
+            {
+                context.Response.StatusCode = StatusCodes.Status400BadRequest;
+                await context.Response.WriteAsync("Multiple Correlation-Id headers are not allowed.");
+                return;
+            }
         }
 
         context.Items[CorrelationIdHeader] = correlationId;
