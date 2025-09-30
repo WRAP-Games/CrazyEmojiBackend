@@ -16,7 +16,8 @@ public class CorrelationIdMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out var correlationId))
+        
+        if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out var correlationIds))
         {
             if (correlationIds.Count > 1)
             {
