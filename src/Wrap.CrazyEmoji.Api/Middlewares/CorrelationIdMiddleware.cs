@@ -32,6 +32,7 @@ public class CorrelationIdMiddleware
             context.Request.Headers[CorrelationIdHeader] = correlationIds;
         }
 
+        var correlationId = correlationIds.ToString();
         context.Items[CorrelationIdHeader] = correlationId;
 
         context.Response.OnStarting(() =>
