@@ -25,6 +25,11 @@ public class CorrelationIdMiddleware
                 return;
             }
         }
+        else
+        {
+            correlationIds = Guid.NewGuid().ToString();
+            context.Request.Headers[CorrelationIdHeader] = correlationIds;
+        }
 
         context.Items[CorrelationIdHeader] = correlationId;
 
