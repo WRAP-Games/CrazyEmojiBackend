@@ -1,4 +1,5 @@
-﻿using Scalar.AspNetCore;
+using Scalar.AspNetCore;
+using Wrap.CrazyEmoji.Api.Middlewares;
 using Wrap.CrazyEmoji.Api.GameLogic;
 
 namespace Wrap.CrazyEmoji.Api.Extensions;
@@ -13,6 +14,7 @@ internal static class WebApplicationExtensions
             app.MapScalarApiReference("/docs");
         }
 
+        app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseExceptionHandler();
         app.UseHttpsRedirection();
         app.MapHub<RoomHub>("/roomHub");
@@ -20,4 +22,5 @@ internal static class WebApplicationExtensions
 
         return app;
     }
+    
 }
