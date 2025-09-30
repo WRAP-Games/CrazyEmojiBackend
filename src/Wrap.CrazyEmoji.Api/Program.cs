@@ -18,6 +18,7 @@ try
         .AddProblemDetails()
         .AddOpenApi()
         .RegisterMapster()
+        .RegisterSignalR()
         .AddControllers();
 
     var app = builder.Build();
