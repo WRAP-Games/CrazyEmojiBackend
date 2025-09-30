@@ -18,7 +18,6 @@ try
         .AddProblemDetails()
         .AddOpenApi()
         .RegisterMapster()
-        .AddSignalR().Services
         .AddControllers();
 
     var app = builder.Build();
