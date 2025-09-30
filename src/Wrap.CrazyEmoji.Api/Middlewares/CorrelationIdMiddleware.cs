@@ -1,5 +1,7 @@
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Primitives;
 
 namespace Wrap.CrazyEmoji.Api.Middlewares;
 
@@ -16,28 +18,38 @@ public class CorrelationIdMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        string correlationId;
         
-        if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out var correlationIds))
+        if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out StringValues headerValues))
         {
-            if (correlationIds.Count > 1)
+            if (headerValues.Count > 1)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                await context.Response.WriteAsync("Multiple Correlation-Id headers are not allowed.");
+                context.Response.ContentType = "application/json";
+                var error = new { error = "Multiple Correlation-Id headers are not allowed." };
+                await context.Response.WriteAsync(JsonSerializer.Serialize(error));
                 return;
+            }
+
+            correlationId = headerValues.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(correlationId))
+            {
+                correlationId = Guid.NewGuid().ToString();
+                context.Request.Headers[CorrelationIdHeader] = correlationId;
             }
         }
         else
         {
-            correlationIds = Guid.NewGuid().ToString();
-            context.Request.Headers[CorrelationIdHeader] = correlationIds;
+            correlationId = Guid.NewGuid().ToString();
+            context.Request.Headers[CorrelationIdHeader] = correlationId;
         }
 
-        var correlationId = correlationIds.ToString();
         context.Items[CorrelationIdHeader] = correlationId;
 
         context.Response.OnStarting(() =>
         {
-            context.Response.Headers[CorrelationIdHeader] = correlationId.ToString();
+            context.Response.Headers[CorrelationIdHeader] = correlationId;
             return Task.CompletedTask;
         });
 
