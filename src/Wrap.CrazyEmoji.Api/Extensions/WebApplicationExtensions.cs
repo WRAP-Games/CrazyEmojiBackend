@@ -1,5 +1,6 @@
-﻿using Scalar.AspNetCore;
+using Scalar.AspNetCore;
 using Wrap.CrazyEmoji.Api.Middlewares;
+using Wrap.CrazyEmoji.Api.GameLogic;
 
 namespace Wrap.CrazyEmoji.Api.Extensions;
 
@@ -16,6 +17,7 @@ internal static class WebApplicationExtensions
         app.UseCorrelationId();
         app.UseExceptionHandler();
         app.UseHttpsRedirection();
+        app.MapHub<RoomHub>("/roomHub");
         app.MapControllers();
 
         return app;
