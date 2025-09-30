@@ -25,7 +25,7 @@ public class CorrelationIdMiddleware
             if (headerValues.Count > 1)
             {
                 context.Response.StatusCode = StatusCodes.Status400BadRequest;
-                context.Response.ContentType = "application/json";
+                context.Response.ContentType = "application/problem+json";
                 var error = new { error = "Multiple Correlation-Id headers are not allowed." };
                 await context.Response.WriteAsync(JsonSerializer.Serialize(error));
                 return;
