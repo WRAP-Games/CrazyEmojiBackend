@@ -1,6 +1,4 @@
 using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
 namespace Wrap.CrazyEmoji.Api.Middlewares;
@@ -19,7 +17,7 @@ public class CorrelationIdMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         string correlationId;
-        
+
         if (!context.Request.Headers.TryGetValue(CorrelationIdHeader, out StringValues headerValues))
         {
             if (headerValues.Count > 1)
