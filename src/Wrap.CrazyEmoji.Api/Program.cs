@@ -18,13 +18,14 @@ try
         .AddProblemDetails()
         .AddOpenApi()
         .RegisterMapster()
+        .RegisterCors()
         .RegisterSignalR()
         .AddControllers();
 
     var app = builder.Build();
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
-    
+
     app.SetupWebApplication();
 
     app.Lifetime.ApplicationStarted.Register(() =>
