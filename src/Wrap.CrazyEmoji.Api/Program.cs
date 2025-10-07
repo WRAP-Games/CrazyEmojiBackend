@@ -21,6 +21,7 @@ try
         .RegisterMapster()
         .RegisterCors()
         .RegisterSignalR()
+        .AddWordService()
         .AddControllers();
 
     var app = builder.Build();
