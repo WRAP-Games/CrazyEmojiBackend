@@ -18,6 +18,8 @@ internal static class WebApplicationExtensions
         app.UseHttpsRedirection();
         app.UseExceptionHandler();
         app.UseCors();
+        app.UseAuthentication();
+        app.UseAuthorization();
         app.MapHub<RoomHub>("/roomHub");
         app.MapControllers();
 
