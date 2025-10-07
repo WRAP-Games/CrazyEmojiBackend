@@ -128,7 +128,7 @@ public class RoomHub(IWordService wordService) : Hub
 
         if (!CurrentWords.TryGetValue(roomCode, out _))
         {
-            await Clients.Caller.SendAsync(Error, "Word is not send to the commander.");
+            await Clients.Caller.SendAsync(Error, "Word has not been sent to the commander.");
             return;
         }
 
