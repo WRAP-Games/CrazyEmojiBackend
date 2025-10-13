@@ -26,6 +26,10 @@ public class WordService : IWordService, IEnumerable<string>
     // Returns a random word from the loaded list.
     public Task<string> GetRandomWordAsync()
     {
-        return Task.FromResult("Leaf");
+        if (_words.Count == 0)
+            throw new InvalidOperationException("Word list not loaded. Call LoadWordsAsync() first.");
+
+        var word = _words[_random.Next(_words.Count)];
+        return Task.FromResult(word);
     }
 }
