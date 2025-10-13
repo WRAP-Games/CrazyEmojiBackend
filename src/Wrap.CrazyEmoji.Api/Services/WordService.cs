@@ -32,4 +32,9 @@ public class WordService : IWordService, IEnumerable<string>
         var word = _words[_random.Next(_words.Count)];
         return Task.FromResult(word);
     }
+    
+    // Allows iteration over all loaded words using foreach.
+    public IEnumerator<string> GetEnumerator() => _words.GetEnumerator();
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
