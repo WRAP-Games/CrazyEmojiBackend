@@ -322,7 +322,7 @@ public class RoomHub(IWordService wordService) : Hub
         }
 
         await Clients.Group(roomCode).SendAsync("RoundEnded", "The round has ended!");
-        await StartRound(roomCode);
+        // Round progression should be managed by a loop in a higher-level method, not by recursion.
     }
 
 
