@@ -96,22 +96,25 @@ public class RoomHub(IWordService wordService) : Hub
             player.Role = PlayerRole.Player;
         }
 
-        while (true)
+        int maxRounds = 10; // Set a reasonable maximum number of rounds, or make this configurable
+        int currentRound = 0;
+        while (currentRound < maxRounds)
         {
             if (!Rooms.TryGetValue(roomCode, out players)
                 || players.Count == 0)
             {
                 await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
-                return;
+                break;
             }
 
             if (players.Count < 3)
             {
                 await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
-                return;
+                break;
             }
 
             await StartRound(roomCode);
+            currentRound++;
         }
 
     }
