@@ -96,27 +96,31 @@ public class RoomHub(IWordService wordService) : Hub
             player.Role = PlayerRole.Player;
         }
 
-        int maxRounds = 10; // Set a reasonable maximum number of rounds, or make this configurable
-        int currentRound = 0;
-        while (currentRound < maxRounds)
+         _ = Task.Run(async () =>
         {
-            if (!Rooms.TryGetValue(roomCode, out players)
-                || players.Count == 0)
+            int maxRounds = 10;
+            int currentRound = 0;
+            while (currentRound < maxRounds)
             {
-                await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
-                break;
+                if (!Rooms.TryGetValue(roomCode, out players)
+                    || players.Count == 0)
+                {
+                    await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
+                    break;
+                }
+    
+                if (players.Count < 3)
+                {
+                    await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
+                    break;
+                }
+    
+                await StartRound(roomCode);
+                currentRound++;
             }
-
-            if (players.Count < 3)
-            {
-                await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
-                break;
-            }
-
-            await StartRound(roomCode);
-            currentRound++;
-        }
-
+        });
+    
+        await Clients.Caller.SendAsync(GameStarted, roomCode);
     }
 
     private async Task StartRound(string roomCode)
@@ -145,7 +149,6 @@ public class RoomHub(IWordService wordService) : Hub
             p.GuessedRight = false;
             p.Role = PlayerRole.Player;
         });
-
     }
 
     private async Task SelectCommander()
@@ -171,7 +174,6 @@ public class RoomHub(IWordService wordService) : Hub
 
         await Clients.Client(commanderConnectionId).SendAsync(CommanderSelected, "You have been selected as the commander.");
         await Clients.Group(roomCode).SendAsync(CommanderAnnounced, $"A commander has been selected. Commander is {players[commanderIndex].Username}");
-
     }
 
     private async Task SendWordToCommander()
@@ -322,10 +324,7 @@ public class RoomHub(IWordService wordService) : Hub
         }
 
         await Clients.Group(roomCode).SendAsync("RoundEnded", "The round has ended!");
-        // Round progression should be managed by a loop in a higher-level method, not by recursion.
     }
-
-
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
