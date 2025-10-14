@@ -6,7 +6,7 @@ public struct Points : IComparable<Points>
 
     public Points(int value)
     {
-        if (value < 0) throw new ArgumentException("Score cannot be negative");
+        if (value < 0) throw new ArgumentException("Score cannot be negative", nameof(value));
         Value = value;
     }
 
