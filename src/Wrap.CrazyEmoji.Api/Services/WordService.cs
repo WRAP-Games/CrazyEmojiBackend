@@ -5,25 +5,24 @@ namespace Wrap.CrazyEmoji.Api.Services;
 
 public class WordService : IWordService, IEnumerable<string>
 {
-    private readonly List<string> _words = new();
-    private readonly Random _random = new();
-    
-    // Loads a list of words from a given Stream.
+    private readonly List<string> _words = [];
+    private readonly Random _random = Random.Shared;
+
     public async Task LoadWordsAsync(Stream wordStream)
     {
-        if (wordStream == null)
-            throw new ArgumentNullException(nameof(wordStream));
+        ArgumentNullException.ThrowIfNull(wordStream);
 
         using var reader = new StreamReader(wordStream);
         string? line;
+        _words.Clear();
+
         while ((line = await reader.ReadLineAsync()) != null)
         {
             if (!string.IsNullOrWhiteSpace(line))
                 _words.Add(line.Trim());
         }
     }
-    
-    // Returns a random word from the loaded list.
+
     public Task<string> GetRandomWordAsync()
     {
         if (_words.Count == 0)
@@ -32,8 +31,7 @@ public class WordService : IWordService, IEnumerable<string>
         var word = _words[_random.Next(_words.Count)];
         return Task.FromResult(word);
     }
-    
-    // Allows iteration over all loaded words using foreach.
+
     public IEnumerator<string> GetEnumerator() => _words.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
