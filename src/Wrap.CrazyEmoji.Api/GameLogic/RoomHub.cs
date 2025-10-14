@@ -8,17 +8,20 @@ public class RoomHub(IWordService wordService) : Hub
 {
     private static readonly ConcurrentDictionary<string, List<Player>> Rooms = new();
     private static readonly ConcurrentDictionary<string, string> CurrentWords = new();
+    private static readonly ConcurrentDictionary<string, bool> EmojisSent = new();
 
-    private const string PlayerLeft = "PlayerLeft";
-    private const string JoinedRoom = "JoinedRoom";
     private const string UsernameSet = "UsernameSet";
     private const string CreatedRoom = "CreatedRoom";
-    private const string ReceiveWord = "ReceiveWord";
-    private const string CorrectGuess = "CorrectGuess";
+    private const string JoinedRoom = "JoinedRoom";
+    private const string GameStarted = "GameStarted";
     private const string ReceiveEmojis = "ReceiveEmojis";
-    private const string IncorrectGuess = "IncorrectGuess";
+    private const string ReceiveWord = "ReceiveWord";
+
     private const string CommanderSelected = "CommanderSelected";
     private const string CommanderAnnounced = "CommanderAnnounced";
+    private const string CorrectGuess = "CorrectGuess";
+    private const string IncorrectGuess = "IncorrectGuess";
+    private const string PlayerLeft = "PlayerLeft";
     private const string Error = "Error";
 
     private const string Username = "Username";
@@ -69,7 +72,83 @@ public class RoomHub(IWordService wordService) : Hub
         await Clients.Caller.SendAsync(Error, "Room not found");
     }
 
-    public async Task SelectCommander()
+    public async Task StartGame()
+    {
+        if (Context.Items[RoomCode] is not string roomCode
+                || !Rooms.TryGetValue(roomCode, out var players)
+                || players.Count == 0)
+        {
+            await Clients.Caller.SendAsync(Error, "No players in room to start the game.");
+            return;
+        }
+
+        if (players.Count < 3)
+        {
+            await Clients.Caller.SendAsync(Error, "Not enough players to start the game. Minimum 3 players required.");
+            return;
+        }
+
+        foreach (var player in players)
+        {
+            player.Points = new Points(0);
+            player.GuessedRight = false;
+            player.HasGuessed = false;
+            player.Role = PlayerRole.Player;
+        }
+
+        int maxRounds = 10; // Set a reasonable maximum number of rounds, or make this configurable
+        int currentRound = 0;
+        while (currentRound < maxRounds)
+        {
+            if (!Rooms.TryGetValue(roomCode, out players)
+                || players.Count == 0)
+            {
+                await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
+                break;
+            }
+
+            if (players.Count < 3)
+            {
+                await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
+                break;
+            }
+
+            await StartRound(roomCode);
+            currentRound++;
+        }
+
+    }
+
+    private async Task StartRound(string roomCode)
+    {
+        EmojisSent[roomCode] = false;
+        await SelectCommander();
+        await SendWordToCommander();
+
+        while (EmojisSent.TryGetValue(roomCode, out var sent) && !sent)
+        {
+            await Task.Delay(100);
+        }
+
+        if (Rooms.TryGetValue(roomCode, out var players))
+        {
+            while (players.Where(p => p.Role != PlayerRole.Commander).Any(p => !p.HasGuessed))
+            {
+                await Task.Delay(100);
+            }
+        }
+        await SendPoints();
+
+        players!.ForEach(p =>
+        {
+            p.HasGuessed = false;
+            p.GuessedRight = false;
+            p.Role = PlayerRole.Player;
+        });
+
+    }
+
+    private async Task SelectCommander()
     {
         if (Context.Items[RoomCode] is not string roomCode
             || !Rooms.TryGetValue(roomCode, out var players)
@@ -92,9 +171,10 @@ public class RoomHub(IWordService wordService) : Hub
 
         await Clients.Client(commanderConnectionId).SendAsync(CommanderSelected, "You have been selected as the commander.");
         await Clients.Group(roomCode).SendAsync(CommanderAnnounced, $"A commander has been selected. Commander is {players[commanderIndex].Username}");
+
     }
 
-    public async Task SendWordToCommander()
+    private async Task SendWordToCommander()
     {
         if (Context.Items[RoomCode] is not string roomCode
             || !Rooms.TryGetValue(roomCode, out var players))
@@ -139,10 +219,12 @@ public class RoomHub(IWordService wordService) : Hub
             return;
         }
 
+        EmojisSent[roomCode] = true;
+
         await Clients.GroupExcept(roomCode, Context.ConnectionId).SendAsync(ReceiveEmojis, emojis);
     }
 
-    public async Task GetWordAndSendPoints(string word)
+    public async Task CheckWord(string word)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(word);
 
@@ -150,6 +232,12 @@ public class RoomHub(IWordService wordService) : Hub
             || !Rooms.TryGetValue(roomCode, out var players))
         {
             await Clients.Caller.SendAsync(Error, "Room not found.");
+            return;
+        }
+
+        if (!EmojisSent.TryGetValue(roomCode, out var sent) || !sent)
+        {
+            await Clients.Caller.SendAsync(Error, "Wait for the commander to send emojis before guessing.");
             return;
         }
 
@@ -172,16 +260,72 @@ public class RoomHub(IWordService wordService) : Hub
             return;
         }
 
+        if (guesser.HasGuessed)
+        {
+            await Clients.Caller.SendAsync(Error, "You can only guess once per round.");
+            return;
+        }
+
+        guesser.HasGuessed = true;
+
         if (string.Equals(word, currentWord, StringComparison.OrdinalIgnoreCase))
         {
-            guesser.Points += 100;
-            await Clients.Caller.SendAsync(CorrectGuess, $"Congratulations! You guessed the word correctly. Points = {guesser.Points}", 100);
+            guesser.GuessedRight = true;
+            await Clients.Caller.SendAsync(CorrectGuess, "Congratulations! You guessed the word correctly.");
         }
         else
         {
-            await Clients.Caller.SendAsync(IncorrectGuess, $"Your guess was incorrect. Try again! Points = {guesser.Points}", 0);
+            guesser.GuessedRight = false;
+            await Clients.Caller.SendAsync(IncorrectGuess, "Your guess was incorrect.");
         }
     }
+
+    private async Task SendPoints()
+    {
+        if (Context.Items[RoomCode] is not string roomCode
+            || !Rooms.TryGetValue(roomCode, out var players))
+        {
+            await Clients.Caller.SendAsync(Error, "Room not found.");
+            return;
+        }
+
+        var nonCommanderPlayers = players.Where(p => p.Role != PlayerRole.Commander).ToList();
+        foreach (var player in nonCommanderPlayers)
+        {
+            if (player.GuessedRight)
+            {
+                player.Points += new Points(100);
+                await Clients.Client(player.ConnectionId).SendAsync(CorrectGuess, $"You earned 100 points! Total: {player.Points}", 100);
+            }
+            else
+            {
+                await Clients.Client(player.ConnectionId).SendAsync(IncorrectGuess, $"No points this round. Total: {player.Points}", 0);
+            }
+        }
+
+        if (nonCommanderPlayers.All(p => p.GuessedRight))
+        {
+            await Clients.Group(roomCode).SendAsync("AllGuessedRight", "All players guessed right!");
+        }
+        else if (nonCommanderPlayers.All(p => !p.GuessedRight))
+        {
+            await Clients.Group(roomCode).SendAsync("AllGuessedWrong", "All players guessed wrong!");
+        }
+        else
+        {
+            var commander = players.FirstOrDefault(p => p.Role == PlayerRole.Commander);
+            if (commander != null)
+            {
+                commander.Points += new Points(100);
+                await Clients.Client(commander.ConnectionId).SendAsync("CommanderBonus", "Commander gets 100 points for mixed guesses!", 100);
+            }
+        }
+
+        await Clients.Group(roomCode).SendAsync("RoundEnded", "The round has ended!");
+        // Round progression should be managed by a loop in a higher-level method, not by recursion.
+    }
+
+
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
