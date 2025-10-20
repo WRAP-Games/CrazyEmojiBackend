@@ -3,9 +3,14 @@ using Wrap.CrazyEmoji.Api.Abstractions;
 
 namespace Wrap.CrazyEmoji.Api.Services;
 
-public class WordService : IWordService, IEnumerable<string>
+public record WordEntry(string Text, int Length)
 {
-    private readonly List<string> _words = [];
+    public WordEntry(string text) : this(text, text.Length) { }
+}
+
+public class WordService : IWordService, IEnumerable<WordEntry>
+{
+    private readonly List<WordEntry> _words = [];
     private readonly Random _random = Random.Shared;
 
     public async Task LoadWordsAsync(Stream wordStream)
@@ -19,20 +24,27 @@ public class WordService : IWordService, IEnumerable<string>
         while ((line = await reader.ReadLineAsync()) != null)
         {
             if (!string.IsNullOrWhiteSpace(line))
-                _words.Add(line.Trim());
+            {
+                var trimmed = line.Trim();
+                var entry = new WordEntry(trimmed);
+
+                if (!_words.Contains(entry))
+                    _words.Add(entry);
+            }
         }
     }
-
+            
+            
     public Task<string> GetRandomWordAsync()
     {
         if (_words.Count == 0)
             throw new InvalidOperationException("Word list not loaded. Call LoadWordsAsync() first.");
 
         var word = _words[_random.Next(_words.Count)];
-        return Task.FromResult(word);
+        return Task.FromResult(word.Text);
     }
 
-    public IEnumerator<string> GetEnumerator() => _words.GetEnumerator();
+    public IEnumerator<WordEntry> GetEnumerator() => _words.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 }
