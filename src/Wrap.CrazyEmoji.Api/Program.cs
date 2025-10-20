@@ -3,6 +3,7 @@ using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
 using Wrap.CrazyEmoji.Api.Infrastructure;
+using Wrap.CrazyEmoji.Api.Abstractions;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
@@ -29,6 +30,10 @@ try
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
 
     app.SetupWebApplication();
+    
+    var wordService = app.Services.GetRequiredService<IWordService>();
+    using var stream = File.OpenRead("words.txt");
+    await wordService.LoadWordsAsync(stream);
 
     app.Lifetime.ApplicationStarted.Register(() =>
     {
