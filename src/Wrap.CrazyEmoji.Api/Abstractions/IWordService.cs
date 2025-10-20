@@ -3,4 +3,5 @@
 public interface IWordService
 {
     Task<string> GetRandomWordAsync();
+    Task LoadWordsAsync(Stream wordStream);
 }

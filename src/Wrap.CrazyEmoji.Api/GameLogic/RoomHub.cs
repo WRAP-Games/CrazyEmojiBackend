@@ -96,11 +96,12 @@ public class RoomHub(IWordService wordService) : Hub
             player.Role = PlayerRole.Player;
         }
 
+        Context.Items["RoundNumber"] = 0;
+        
          _ = Task.Run(async () =>
         {
             int maxRounds = 10;
-            int currentRound = 0;
-            while (currentRound < maxRounds)
+            while ((Context.Items["RoundNumber"] is int currentRound) && currentRound < maxRounds)
             {
                 if (!Rooms.TryGetValue(roomCode, out players)
                     || players.Count == 0)
@@ -116,8 +117,7 @@ public class RoomHub(IWordService wordService) : Hub
                 }
     
                 await StartRound(roomCode);
-                currentRound++;
-            }
+                Context.Items["RoundNumber"] = currentRound + 1;            }
         });
     
         await Clients.Caller.SendAsync(GameStarted, roomCode);
