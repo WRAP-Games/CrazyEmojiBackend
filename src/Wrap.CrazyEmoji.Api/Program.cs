@@ -2,8 +2,8 @@ using System.Runtime.CompilerServices;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
+using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Infrastructure;
-using Wrap.CrazyEmoji.Api.Services;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
 
@@ -19,22 +19,19 @@ try
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()
         .AddOpenApi()
+        .AddSingleton<RoomManager>()
         .RegisterMapster()
         .RegisterCors()
         .RegisterSignalR()
-        .AddWordService()
         .AddControllers();
+
+    await builder.Services.AddWordService();
 
     var app = builder.Build();
 
     Log.Information("Application has been built for {EnvironmentName} environment.", builder.Environment.EnvironmentName);
 
     app.SetupWebApplication();
-    
-    var wordService = new WordService();
-    using var stream = File.OpenRead("words.txt");
-    await wordService.LoadWordsAsync(stream);
-    builder.Services.AddSingleton(wordService);
 
     app.Lifetime.ApplicationStarted.Register(() =>
     {

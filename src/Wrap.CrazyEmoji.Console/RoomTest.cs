@@ -15,13 +15,20 @@ public static class RoomTest
         connection.On<string>("UsernameSet", username => Console.WriteLine($"Username set: {username}"));
         connection.On<string>("CreatedRoom", code => Console.WriteLine($"Room created: {code}"));
         connection.On<string>("JoinedRoom", code => Console.WriteLine($"Joined room: {code}"));
+        connection.On<string>("GameStarted", code => Console.WriteLine($"Game started in room: {code}"));
         connection.On<string>("PlayerLeft", connectionId => Console.WriteLine($"Player left: {connectionId}"));
         connection.On<string>("CommanderSelected", message => Console.WriteLine($"[COMMANDER] {message}"));
         connection.On<string>("CommanderAnnounced", message => Console.WriteLine($"[ANNOUNCEMENT] {message}"));
         connection.On<string>("ReceiveWord", word => Console.WriteLine($"[COMMANDER] Your word is: {word}"));
         connection.On<string>("ReceiveEmojis", emojis => Console.WriteLine($"[EMOJIS RECEIVED] {emojis}"));
-        connection.On<string, int>("CorrectGuess", (msg, points) => Console.WriteLine($"[CORRECT] {msg}"));
-        connection.On<string, int>("IncorrectGuess", (msg, points) => Console.WriteLine($"[INCORRECT] {msg}"));
+        connection.On<string>("CorrectGuess", message => Console.WriteLine($"[CORRECT] {message}"));
+        connection.On<string, int>("CorrectGuess", (msg, points) => Console.WriteLine($"[CORRECT] {msg} (+{points} points)"));
+        connection.On<string>("IncorrectGuess", message => Console.WriteLine($"[INCORRECT] {message}"));
+        connection.On<string, int>("IncorrectGuess", (msg, points) => Console.WriteLine($"[INCORRECT] {msg} (+{points} points)"));
+        connection.On<string>("AllGuessedRight", message => Console.WriteLine($"[RESULT] {message}"));
+        connection.On<string>("AllGuessedWrong", message => Console.WriteLine($"[RESULT] {message}"));
+        connection.On<string, int>("CommanderBonus", (msg, points) => Console.WriteLine($"[COMMANDER] {msg} (+{points} points)"));
+        connection.On<string>("RoundEnded", message => Console.WriteLine($"[ROUND] {message}"));
         connection.On<string>("Error", error => Console.WriteLine($"[ERROR] {error}"));
 
         await connection.StartAsync();
@@ -32,11 +39,10 @@ public static class RoomTest
         Console.WriteLine("1. setname <USERNAME>");
         Console.WriteLine("2. create <ROOMCODE>");
         Console.WriteLine("3. join <ROOMCODE>");
-        Console.WriteLine("4. selectcommander");
-        Console.WriteLine("5. sendword");
-        Console.WriteLine("6. emojis <EMOJI SEQUENCE>");
-        Console.WriteLine("7. guess <WORD>");
-        Console.WriteLine("8. exit");
+        Console.WriteLine("4. start");
+        Console.WriteLine("5. emojis <EMOJI SEQUENCE>");
+        Console.WriteLine("6. guess <WORD>");
+        Console.WriteLine("7. exit");
 
         while (true)
         {
@@ -63,11 +69,8 @@ public static class RoomTest
                         if (parts.Length < 2) { Console.WriteLine("Usage: join <ROOMCODE>"); break; }
                         await connection.InvokeAsync("JoinRoom", parts[1]);
                         break;
-                    case "selectcommander":
-                        await connection.InvokeAsync("SelectCommander");
-                        break;
-                    case "sendword":
-                        await connection.InvokeAsync("SendWordToCommander");
+                    case "start":
+                        await connection.InvokeAsync("StartGame");
                         break;
                     case "emojis":
                         if (parts.Length < 2) { Console.WriteLine("Usage: emojis <EMOJI SEQUENCE>"); break; }
@@ -75,7 +78,7 @@ public static class RoomTest
                         break;
                     case "guess":
                         if (parts.Length < 2) { Console.WriteLine("Usage: guess <WORD>"); break; }
-                        await connection.InvokeAsync("GetWordAndSendPoints", parts[1]);
+                        await connection.InvokeAsync("CheckWord", parts[1]);
                         break;
                     default:
                         Console.WriteLine("Unknown command.");

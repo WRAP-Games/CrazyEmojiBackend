@@ -33,8 +33,8 @@ public class WordService : IWordService, IEnumerable<WordEntry>
             }
         }
     }
-            
-            
+
+
     public Task<string> GetRandomWordAsync()
     {
         if (_words.Count == 0)

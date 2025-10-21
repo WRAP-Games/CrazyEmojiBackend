@@ -5,9 +5,13 @@ namespace Wrap.CrazyEmoji.Api.Bootstraps;
 
 public static class WordBootstrap
 {
-    public static IServiceCollection AddWordService(this IServiceCollection services)
+    public async static Task<IServiceCollection> AddWordService(this IServiceCollection services)
     {
-        services.AddSingleton<IWordService, WordService>();
-        return services;
+        var wordService = new WordService();
+        using var stream = File.OpenRead("Content/words.txt");
+        await wordService.LoadWordsAsync(stream);
+
+        return services
+            .AddSingleton<IWordService>(wordService);
     }
 }
