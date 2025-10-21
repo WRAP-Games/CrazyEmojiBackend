@@ -10,6 +10,8 @@ public struct Points : IComparable<Points>
         Value = value;
     }
 
+    public bool IsZero() => Value == 0;
+
     public static Points operator +(Points left, Points right) => new Points(left.Value + right.Value);
 
     public int CompareTo(Points other) => Value.CompareTo(other.Value);
