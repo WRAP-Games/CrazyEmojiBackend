@@ -55,7 +55,7 @@ public class RoomHub(IWordService wordService) : Hub
 
         if (Rooms.TryGetValue(roomCode, out _))
         {
-            Rooms[roomCode].Add(new()
+            Rooms[roomCode].Add(new Player
             {
                 ConnectionId = Context.ConnectionId,
                 Username = Context.Items[Username] as string ?? Context.ConnectionId,
@@ -97,29 +97,30 @@ public class RoomHub(IWordService wordService) : Hub
         }
 
         Context.Items["RoundNumber"] = 0;
-        
-         _ = Task.Run(async () =>
-        {
-            int maxRounds = 10;
-            while ((Context.Items["RoundNumber"] is int currentRound) && currentRound < maxRounds)
-            {
-                if (!Rooms.TryGetValue(roomCode, out players)
-                    || players.Count == 0)
-                {
-                    await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
-                    break;
-                }
-    
-                if (players.Count < 3)
-                {
-                    await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
-                    break;
-                }
-    
-                await StartRound(roomCode);
-                Context.Items["RoundNumber"] = currentRound + 1;            }
-        });
-    
+
+        _ = Task.Run(async () =>
+       {
+           int maxRounds = 10;
+           while ((Context.Items["RoundNumber"] is int currentRound) && currentRound < maxRounds)
+           {
+               if (!Rooms.TryGetValue(roomCode, out players)
+                   || players.Count == 0)
+               {
+                   await Clients.Caller.SendAsync(Error, "No players in room to continue the game.");
+                   break;
+               }
+
+               if (players.Count < 3)
+               {
+                   await Clients.Caller.SendAsync(Error, "Not enough players to continue the game. Minimum 3 players required.");
+                   break;
+               }
+
+               await StartRound(roomCode);
+               Context.Items["RoundNumber"] = currentRound + 1;
+           }
+       });
+
         await Clients.Caller.SendAsync(GameStarted, roomCode);
     }
 
