@@ -4,7 +4,6 @@ public class Player
 {
     private string _username = string.Empty;
     private string _connectionId = string.Empty;
-    private Points _points = new(0);
 
     public string Username
     {
