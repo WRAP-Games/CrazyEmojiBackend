@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Wrap.CrazyEmoji.Api.Constants;
-using Wrap.CrazyEmoji.Api.GameLogic;
+
+namespace Wrap.CrazyEmoji.Api.GameLogic;
 
 public class RoomHub : Hub
 {

@@ -1,4 +1,5 @@
 using Scalar.AspNetCore;
+using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Middlewares;
 
 namespace Wrap.CrazyEmoji.Api.Extensions;
