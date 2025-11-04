@@ -18,7 +18,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     private static readonly Random RandomGenerator = Random.Shared;
 
     public Task<bool> CreateRoomAsync(string roomCode)
-        => Task.FromResult(_rooms.TryAdd(roomCode, new List<Player>()));
+        => Task.FromResult(_rooms.TryAdd(roomCode, []));
 
     public async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
@@ -125,7 +125,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
 
         await _hubContext.Clients.Client(commanderConnectionId)
             .SendAsync(RoomHubConstants.CommanderSelected, "You have been selected as the commander.");
-        await _hubContext.Clients.Group(roomCode)
+        await _hubContext.Clients.GroupExcept(roomCode, commanderConnectionId)
             .SendAsync(RoomHubConstants.CommanderAnnounced,
                 $"Commander is {players[commanderIndex].Username}");
     }
@@ -199,6 +199,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
         }
 
         var guesser = players.FirstOrDefault(p => p.ConnectionId == connectionId);
+
         if (guesser == null)
         {
             await _hubContext.Clients.Client(connectionId)
@@ -225,14 +226,10 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
         if (string.Equals(word, currentWord, StringComparison.OrdinalIgnoreCase))
         {
             guesser.GuessedRight = true;
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.CorrectGuess, "Correct!");
         }
         else
         {
             guesser.GuessedRight = false;
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.IncorrectGuess, "Wrong guess.");
         }
     }
 
@@ -241,7 +238,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
         if (!_rooms.TryGetValue(roomCode, out var players))
             return;
 
-        var nonCommanderPlayers = players.Where(p => p.Role != PlayerRole.Commander).ToList();
+        var nonCommanderPlayers = players.FindAll(p => p.Role != PlayerRole.Commander);
 
         foreach (var player in nonCommanderPlayers)
         {
