@@ -1,4 +1,8 @@
-﻿namespace Wrap.CrazyEmoji.UnitTests;
+﻿using System.Text;
+using Wrap.CrazyEmoji.Api.GameLogic;
+using Wrap.CrazyEmoji.Api.Services;
+
+namespace Wrap.CrazyEmoji.UnitTests;
 
 public class UnitTest1
 {
