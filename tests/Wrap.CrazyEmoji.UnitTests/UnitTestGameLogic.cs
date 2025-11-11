@@ -33,6 +33,32 @@ public class UnitTestGameLogic
         Assert.True(p1.CompareTo(p2) < 0);
     }
     
+    //player role tests
+    
+    [Fact]
+    public void DefaultRole_ShouldBePlayer()
+    {
+        var player = new Player();
+        Assert.Equal(PlayerRole.Player, player.Role);
+    }
+    
+    [Fact]
+    public void CanAssignCommanderRole()
+    {
+        var player = new Player();
+        player.Role = PlayerRole.Commander;
+        Assert.Equal(PlayerRole.Commander, player.Role);
+    }
+    
+    [Fact]
+    public void PlayerRoleEnum_ShouldHaveExpectedValues()
+    {
+        var commander = PlayerRole.Commander;
+        var playerRole = PlayerRole.Player;
+        Assert.Equal(0, (int)commander);
+        Assert.Equal(1, (int)playerRole);
+    }
+    
     
     //player tests
     [Fact]
