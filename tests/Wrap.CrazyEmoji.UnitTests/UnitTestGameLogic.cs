@@ -1,4 +1,6 @@
 ﻿using System.Text;
+using Microsoft.AspNetCore.SignalR;
+using Moq;
 using Wrap.CrazyEmoji.Api.Constants;
 using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Services;
@@ -197,6 +199,12 @@ public class UnitTestGameLogic
         Assert.True(player.GuessedRight);
     }
 
+    //room hub tests
+    
+   
+    
+    
+    
 
     //WordService tests
     [Fact]
