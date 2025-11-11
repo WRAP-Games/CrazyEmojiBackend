@@ -24,4 +24,34 @@ public class UnitTest1
         var p2 = new Points(20);
         Assert.True(p1.CompareTo(p2) < 0);
     }
+    
+    [Fact]
+    public void Test4_Constructor_SetsUsernameAndConnectionId()
+    {
+        var player = new Player("sussie", "abc123");
+        Assert.Equal("sussie", player.Username);
+        Assert.Equal("abc123", player.ConnectionId);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void Test5_Username_Throws_WhenInvalid(string input)
+    {
+        var player = new Player();
+        Assert.Throws<ArgumentException>(() => player.Username = input);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void Test6_ConnectionId_Throws_WhenInvalid(string input)
+    {
+        var player = new Player();
+        Assert.Throws<ArgumentException>(() => player.ConnectionId = input);
+    }
+
+
 }
