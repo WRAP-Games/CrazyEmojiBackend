@@ -53,5 +53,33 @@ public class UnitTest1
         Assert.Throws<ArgumentException>(() => player.ConnectionId = input);
     }
 
+    [Fact]
+    public async Task Test7_LoadWordsAsync_LoadsWordsCorrectly()
+    {
+        var service = new WordService();
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("apple\nbanana\napple"));
+        await service.LoadWordsAsync(stream);
+
+        Assert.Equal(2, service.Count());
+    }
+
+    [Fact]
+    public async Task Test8_GetRandomWordAsync_Throws_WhenEmpty()
+    {
+        var service = new WordService();
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetRandomWordAsync());
+    }
+
+    [Fact]
+    public async Task Test9_GetRandomWordAsync_ReturnsWord_WhenLoaded()
+    {
+        var service = new WordService();
+        var stream = new MemoryStream(Encoding.UTF8.GetBytes("apple\nbanana"));
+        await service.LoadWordsAsync(stream);
+
+        var word = await service.GetRandomWordAsync();
+        Assert.Contains(word, new[] { "apple", "banana" });
+    }
+
 
 }
