@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using Wrap.CrazyEmoji.Api.Constants;
 using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Services;
 
@@ -6,6 +7,8 @@ namespace Wrap.CrazyEmoji.UnitTests;
 
 public class UnitTest1
 {
+    
+    //points tests
     [Fact]
     public void Test1_Constructor_Throws_WhenNegative()
     {
@@ -21,6 +24,7 @@ public class UnitTest1
         Assert.Equal(80, result.Value);
     }
 
+    
     [Fact]
     public void Test3_CompareTo_ReturnsExpectedOrder()
     {
@@ -29,34 +33,110 @@ public class UnitTest1
         Assert.True(p1.CompareTo(p2) < 0);
     }
     
+    
+    //player tests
     [Fact]
-    public void Test4_Constructor_SetsUsernameAndConnectionId()
+    public void Constructor_ValidValues_ShouldAssignProperties()
     {
-        var player = new Player("sussie", "abc123");
-        Assert.Equal("sussie", player.Username);
-        Assert.Equal("abc123", player.ConnectionId);
+        string username = "sussie";
+        string connectionId = "abc123";
+
+        var player = new Player(username, connectionId);
+
+        Assert.Equal(username, player.Username);
+        Assert.Equal(connectionId, player.ConnectionId);
+        Assert.Equal(0, player.Points.Value);
+        Assert.Equal(PlayerRole.Player, player.Role);
+        Assert.False(player.HasGuessed);
+        Assert.False(player.GuessedRight);
     }
 
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
     [InlineData(null)]
-    public void Test5_Username_Throws_WhenInvalid(string input)
+    public void Constructor_InvalidUsername_ShouldThrow(string? username)
     {
-        var player = new Player();
-        Assert.Throws<ArgumentException>(() => player.Username = input);
+        string connectionId = "conn-1";
+        Assert.Throws<ArgumentException>(() => new Player(username!, connectionId));
     }
-
+    
+    
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
     [InlineData(null)]
-    public void Test6_ConnectionId_Throws_WhenInvalid(string input)
+    public void Constructor_InvalidConnectionId_ShouldThrow(string? connectionId)
+    {
+        string username = "sussie";
+        Assert.Throws<ArgumentException>(() => new Player(username, connectionId!));
+    }
+    
+    [Fact]
+    public void Username_SetValidValue_ShouldUpdateProperty()
+    {
+        var player = new Player("sussie", "id");
+        player.Username = "Bob";
+
+        Assert.Equal("Bob", player.Username);
+    }
+    
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void Username_SetInvalidValue_ShouldThrow(string? invalidValue)
+    {
+        var player = new Player("sussie", "id");
+
+        Assert.Throws<ArgumentException>(() => player.Username = invalidValue!);
+    }
+    
+    [Fact]
+    public void ConnectionId_SetValidValue_ShouldUpdateProperty()
+    {
+        var player = new Player("sussie", "id");
+        player.ConnectionId = "new-id";
+        Assert.Equal("new-id", player.ConnectionId);
+    }
+    
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void ConnectionId_SetInvalidValue_ShouldThrow(string? invalidValue)
+    {
+        var player = new Player("sussie", "id");
+        Assert.Throws<ArgumentException>(() => player.ConnectionId = invalidValue!);
+    }
+    
+    [Fact]
+    public void Points_InitialValue_ShouldBeZero()
     {
         var player = new Player();
-        Assert.Throws<ArgumentException>(() => player.ConnectionId = input);
+        Assert.Equal(0, player.Points.Value);
+    }
+    
+    [Fact]
+    public void CanSetRole()
+    {
+        var player = new Player();
+        player.Role = PlayerRole.Commander;
+        Assert.Equal(PlayerRole.Commander, player.Role);
+    }
+    
+    [Fact]
+    public void GuessFlags_CanBeUpdated()
+    {
+        var player = new Player();
+        player.HasGuessed = true;
+        player.GuessedRight = true;
+        Assert.True(player.HasGuessed);
+        Assert.True(player.GuessedRight);
     }
 
+
+    //WordService tests
     [Fact]
     public async Task Test7_LoadWordsAsync_LoadsWordsCorrectly()
     {
@@ -84,6 +164,8 @@ public class UnitTest1
         var word = await service.GetRandomWordAsync();
         Assert.Contains(word, new[] { "apple", "banana" });
     }
+
+    
 
 
 }
