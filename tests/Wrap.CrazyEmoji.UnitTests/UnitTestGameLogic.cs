@@ -9,29 +9,65 @@ public class UnitTestGameLogic
 {
     
     //points tests
-    [Fact]
-    public void Test1_Constructor_Throws_WhenNegative()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(-20)]
+    public void Constructor_NegativeValue_ShouldThrowArgumentException(int invalidValue)
     {
-        Assert.Throws<ArgumentException>(() => new Points(-1));
+        Assert.Throws<ArgumentException>(() => new Points(invalidValue));
     }
-
-    [Fact]
-    public void Test2_AdditionOperator_AddsCorrectly()
-    {
-        var p1 = new Points(50);
-        var p2 = new Points(30);
-        var result = p1 + p2;
-        Assert.Equal(80, result.Value);
-    }
-
     
     [Fact]
-    public void Test3_CompareTo_ReturnsExpectedOrder()
+    public void Constructor_ValidValue_ShouldSetValue()
     {
-        var p1 = new Points(10);
-        var p2 = new Points(20);
-        Assert.True(p1.CompareTo(p2) < 0);
+        int value = 5;
+        var points = new Points(value);
+        Assert.Equal(value, points.Value);
     }
+
+    [Fact]
+    public void IsZero_WhenValueIsZero_ShouldReturnTrue()
+    {
+        var points = new Points(0);
+        bool result = points.IsZero();
+        Assert.True(result);
+    }
+    
+    [Fact]
+    public void IsZero_WhenValueIsNotZero_ShouldReturnFalse()
+    {
+        var points = new Points(3);
+        bool result = points.IsZero();
+        Assert.False(result);
+    }
+    
+    [Fact]
+    public void AdditionOperator_ShouldReturnCorrectSum()
+    {
+        var p1 = new Points(4);
+        var p2 = new Points(6);
+        var result = p1 + p2;
+        Assert.Equal(10, result.Value);
+    }
+    
+    [Fact]
+    public void CompareTo_ShouldReturnCorrectComparisons()
+    {
+        var smaller = new Points(3);
+        var larger = new Points(8);
+        Assert.True(smaller.CompareTo(larger) < 0);
+        Assert.True(larger.CompareTo(smaller) > 0);
+        Assert.Equal(0, smaller.CompareTo(new Points(3)));
+    }
+    
+    [Fact]
+    public void ToString_ShouldReturnValueAsString()
+    { 
+        var points = new Points(15);
+        var result = points.ToString();
+        Assert.Equal("15", result);
+    }
+    
     
     //player role tests
     
