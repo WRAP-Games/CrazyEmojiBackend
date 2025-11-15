@@ -18,14 +18,14 @@ public class RoomHub : Hub
         await Clients.Caller.SendAsync(RoomHubConstants.UsernameSet, username);
     }
 
-    public async Task CreateRoom(string roomCode)
+    public async Task CreateRoom(string roomName)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roomCode);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomName);
 
-        var created = await _roomManager.CreateRoomAsync(roomCode);
-        if (!created)
+        var roomCode = await _roomManager.CreateRoomAsync(roomName);
+        if (roomCode == null)
         {
-            await Clients.Caller.SendAsync(RoomHubConstants.Error, "RoomAlreadyExists");
+            await Clients.Caller.SendAsync(RoomHubConstants.Error, "Failed to create room");
             return;
         }
 
