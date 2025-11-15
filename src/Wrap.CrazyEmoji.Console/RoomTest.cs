@@ -37,7 +37,7 @@ public static class RoomTest
 
         Console.WriteLine("Type a command:");
         Console.WriteLine("1. setname <USERNAME>");
-        Console.WriteLine("2. create <ROOMCODE>");
+        Console.WriteLine("2. create <ROOMNAME>");
         Console.WriteLine("3. join <ROOMCODE>");
         Console.WriteLine("4. start");
         Console.WriteLine("5. emojis <EMOJI SEQUENCE>");
@@ -62,7 +62,7 @@ public static class RoomTest
                         await connection.InvokeAsync("SetUsername", parts[1]);
                         break;
                     case "create":
-                        if (parts.Length < 2) { Console.WriteLine("Usage: create <ROOMCODE>"); break; }
+                        if (parts.Length < 2) { Console.WriteLine("Usage: create <ROOMNAME>"); break; }
                         await connection.InvokeAsync("CreateRoom", parts[1]);
                         break;
                     case "join":

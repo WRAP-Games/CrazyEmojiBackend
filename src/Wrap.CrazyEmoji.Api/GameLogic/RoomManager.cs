@@ -17,8 +17,34 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
 
     private static readonly Random RandomGenerator = Random.Shared;
 
-    public Task<bool> CreateRoomAsync(string roomCode)
-        => Task.FromResult(_rooms.TryAdd(roomCode, []));
+    public Task<string?> CreateRoomAsync(string roomName)
+    {
+        var roomCode = GenerateUniqueRoomCode();
+        return _rooms.TryAdd(roomCode, [])
+            ? Task.FromResult<string?>(roomCode)
+            : Task.FromResult<string?>(null);
+    }
+
+    private string GenerateUniqueRoomCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        string roomCode;
+        int attempts = 0;
+        const int maxAttempts = 100;
+
+        do
+        {
+            roomCode = new string(Enumerable.Repeat(chars, 6)
+                .Select(s => s[RandomGenerator.Next(s.Length)]).ToArray());
+            attempts++;
+        }
+        while (_rooms.ContainsKey(roomCode) && attempts < maxAttempts);
+
+        if (attempts >= maxAttempts)
+            throw new InvalidOperationException("Unable to generate unique room code after maximum attempts.");
+
+        return roomCode;
+    }
 
     public async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
