@@ -79,7 +79,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, ex.Message);
             }
-            catch (NotEnoughPlayersException  ex)
+            catch (NotEnoughPlayersException ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
                 await _hubContext.Clients.Group(roomCode)
