@@ -100,11 +100,11 @@ public class RoomManager
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, ex.Message);
             }
-            catch (NotEnoughPlayersException  ex)
+            catch (NotEnoughPlayersException ex)
             {
                 _logger.LogWarning(ex, "Not enough players in room {RoomCode}", roomCode);
                 await _hubContext.Clients.Group(roomCode)
-                    .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
             }
             catch (CommanderNotFoundException ex)
             {
