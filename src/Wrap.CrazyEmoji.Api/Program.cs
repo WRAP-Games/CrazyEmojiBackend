@@ -44,14 +44,14 @@ try
     });
 
     app.Run();
-    }
-    catch (Exception ex)
-    {
-        Log.Fatal(ex, "Failed to start application.");
-    }
-    finally
-    {
-        Log.CloseAndFlush();
-    }
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Failed to start application.");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 public partial class Program { }
