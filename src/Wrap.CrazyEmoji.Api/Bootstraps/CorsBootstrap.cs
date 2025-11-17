@@ -6,10 +6,10 @@ internal static class CorsBootstrap
     {
         return services.AddCors(options =>
         {
-            options.AddDefaultPolicy(builder =>
+            options.AddPolicy("ClientCors", builder =>
             {
-                builder
-                    .SetIsOriginAllowed(_ => true)
+                builder.WithOrigins("http://localhost:4200")
+                    .AllowCredentials()
                     .AllowAnyHeader()
                     .AllowAnyMethod();
             });
