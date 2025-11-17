@@ -24,7 +24,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     public async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-            return false;
+            throw new RoomNotFoundException(roomCode);
 
         players.Add(player);
         await _hubContext.Groups.AddToGroupAsync(player.ConnectionId, roomCode);
