@@ -72,11 +72,32 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync("GameEnded", "The game has ended!");
             }
+            catch (RoomNotFoundException ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
+
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
+            }
             catch (NotEnoughPlayersException  ex)
             {
                 Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
+            }
+            catch (CommanderNotFoundException ex)
+            {
+                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
+
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[UNEXPECTED ERROR] {ex.Message}\n{ex.StackTrace}");
+
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, "An unexpected error occurred.");
             }
         });
 
@@ -137,11 +158,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
 
         var commander = players.FirstOrDefault(p => p.Role == PlayerRole.Commander);
         if (commander is null)
-        {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Commander not found.");
-            return;
-        }
+            throw new CommanderNotFoundException(roomCode);
 
         var word = await _wordService.GetRandomWordAsync();
         _currentWords[roomCode] = word;
@@ -152,11 +169,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     public async Task SendEmojisAsync(string roomCode, string connectionId, string emojis)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-        {
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
-        }
+            throw new RoomNotFoundException(roomCode);
 
         var commander = players.FirstOrDefault(p => p.ConnectionId == connectionId);
         if (commander == null || commander.Role != PlayerRole.Commander)
@@ -174,11 +187,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     public async Task CheckWordAsync(string roomCode, string connectionId, string word)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-        {
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
-        }
+            throw new RoomNotFoundException(roomCode);
 
         if (!_emojisSent.TryGetValue(roomCode, out var sent) || !sent)
         {
