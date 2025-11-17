@@ -132,9 +132,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
+            throw new RoomNotFoundException(roomCode);
         }
 
         var commander = players.FirstOrDefault(p => p.Role == PlayerRole.Commander);
