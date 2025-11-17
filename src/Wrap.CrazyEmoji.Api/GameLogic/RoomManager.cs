@@ -6,17 +6,28 @@ using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
-public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordService)
+public class RoomManager
 {
-    private readonly IHubContext<RoomHub> _hubContext = hubContext;
-    private readonly IWordService _wordService = wordService;
-
+    private readonly IHubContext<RoomHub> _hubContext;
+    private readonly IWordService _wordService;
+    private readonly ILogger<RoomManager> _logger;
+    
     private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
 
     private static readonly Random RandomGenerator = Random.Shared;
+    
+    public RoomManager(
+        IHubContext<RoomHub> hubContext,
+        IWordService wordService,
+        ILogger<RoomManager> logger)
+    {
+        _hubContext = hubContext;
+        _wordService = wordService;
+        _logger = logger;
+    }
 
     public Task<bool> CreateRoomAsync(string roomCode)
         => Task.FromResult(_rooms.TryAdd(roomCode, []));
@@ -25,6 +36,8 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
             throw new RoomNotFoundException(roomCode);
+
+        _logger.LogInformation("Player {Player} joining room {RoomCode}", player.Username, roomCode);
 
         players.Add(player);
         await _hubContext.Groups.AddToGroupAsync(player.ConnectionId, roomCode);
@@ -36,8 +49,15 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
         foreach (var room in _rooms)
         {
             if (room.Value.RemoveAll(p => p.ConnectionId == connectionId) > 0)
+            {
+                _logger.LogInformation(
+                    "Player {ConnectionId} removed from room {RoomCode}",
+                    connectionId,
+                    room.Key);
+
                 await _hubContext.Clients.Group(room.Key)
                     .SendAsync(RoomHubConstants.PlayerLeft, connectionId);
+            }
         }
     }
 
@@ -65,6 +85,8 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 const int maxRounds = 10;
                 while (_roomRounds.TryGetValue(roomCode, out int currentRound) && currentRound < maxRounds)
                 {
+                    _logger.LogInformation("Starting round {Round} in room {RoomCode}", currentRound + 1, roomCode);
+
                     await StartRoundAsync(roomCode);
                     _roomRounds[roomCode] = currentRound + 1;
                 }
@@ -74,28 +96,25 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
             }
             catch (RoomNotFoundException ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
-
+                _logger.LogWarning(ex, "Room {RoomCode} not found", roomCode);
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, ex.Message);
             }
             catch (NotEnoughPlayersException  ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
+                _logger.LogWarning(ex, "Not enough players in room {RoomCode}", roomCode);
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
             }
             catch (CommanderNotFoundException ex)
             {
-                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
-
+                _logger.LogWarning(ex, "Commander not found in room {RoomCode}", roomCode);
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, ex.Message);
             }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"[UNEXPECTED ERROR] {ex.Message}\n{ex.StackTrace}");
-
+                _logger.LogError(ex, "Unexpected error in game loop for room {RoomCode}", roomCode);
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, "An unexpected error occurred.");
             }
