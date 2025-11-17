@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.SignalR;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
+using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
@@ -44,9 +45,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Not enough players to start.");
-            return false;
+            throw new NotEnoughPlayersException(roomCode, players?.Count ?? 0);
         }
 
         foreach (var player in players)
@@ -73,8 +72,9 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync("GameEnded", "The game has ended!");
             }
-            catch (Exception ex)
+            catch (NotEnoughPlayersException  ex)
             {
+                Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
             }
@@ -114,9 +114,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Not enough players for commander selection.");
-            return;
+            throw new NotEnoughPlayersException(roomCode, players?.Count ?? 0);
         }
 
         int commanderIndex = RandomGenerator.Next(players.Count);
