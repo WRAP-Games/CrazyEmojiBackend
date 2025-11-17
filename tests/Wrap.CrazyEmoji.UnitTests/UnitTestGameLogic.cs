@@ -198,12 +198,6 @@ public class UnitTestGameLogic
         Assert.True(player.HasGuessed);
         Assert.True(player.GuessedRight);
     }
-
-    //room hub tests
-    
-   
-    
-    
     
 
     //WordService tests
