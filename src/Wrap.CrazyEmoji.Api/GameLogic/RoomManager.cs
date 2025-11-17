@@ -83,7 +83,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
             {
                 Console.Error.WriteLine($"[ERROR] {ex.Message}\n{ex.StackTrace}");
                 await _hubContext.Clients.Group(roomCode)
-                    .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
             }
             catch (CommanderNotFoundException ex)
             {
