@@ -29,7 +29,7 @@ public class GameDbContext : DbContext
             entity.HasMany(e => e.Users)
                   .WithOne(u => u.Game)
                   .HasForeignKey(u => u.RoomCode)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasMany(e => e.Rounds)
                   .WithOne(r => r.Game)
