@@ -11,14 +11,16 @@ public class RoomManager
     private readonly IHubContext<RoomHub> _hubContext;
     private readonly IWordService _wordService;
     private readonly ILogger<RoomManager> _logger;
-    
+
     private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
 
+    private readonly GameCache<Player> _playerCache = new();
+
     private static readonly Random RandomGenerator = Random.Shared;
-    
+
     public RoomManager(
         IHubContext<RoomHub> hubContext,
         IWordService wordService,
@@ -87,7 +89,7 @@ public class RoomManager
         }
     }
 
-    public async Task<bool> StartGameAsync(string roomCode)
+    public Task<bool> StartGameAsync(string roomCode)
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
@@ -146,7 +148,7 @@ public class RoomManager
             }
         });
 
-        return true;
+        return Task.FromResult(true);
     }
 
     private async Task StartRoundAsync(string roomCode)
@@ -298,6 +300,8 @@ public class RoomManager
                 await _hubContext.Clients.Client(player.ConnectionId)
                     .SendAsync(RoomHubConstants.CorrectGuess,
                         $"You earned 100 points! Total: {player.Points}", 100);
+
+                _playerCache.StoreValue($"score_{player.ConnectionId}", player.Points.Value);
             }
             else
             {
@@ -306,6 +310,9 @@ public class RoomManager
                         $"No points. Total: {player.Points}", 0);
             }
         }
+
+        var bestPoints = _playerCache.GetBest(nonCommanderPlayers.Select(p => p.Points));
+        _logger.LogInformation("Best score in room {RoomCode}: {Score}", roomCode, bestPoints);
 
         if (nonCommanderPlayers.All(p => p.GuessedRight))
         {
