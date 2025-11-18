@@ -51,7 +51,7 @@ public class GameDbContext : DbContext
         modelBuilder.Entity<GameRoundEntity>(entity =>
         {
             entity.HasKey(e => e.Id);
-            entity.Property(e => e.Id).UseSerialColumn();
+            // entity.Property(e => e.Id).UseSerialColumn(); // Removed deprecated method. Default conventions suffice.
         });
     }
 }
