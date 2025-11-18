@@ -11,7 +11,8 @@ internal static class DatabaseBootstrap
 
         if (string.IsNullOrEmpty(connectionString))
         {
-            throw new InvalidOperationException("Database connection string 'DefaultConnection' not found.");
+            // Database is disabled - skip registration
+            return services;
         }
 
         services.AddDbContext<GameDbContext>(options =>
