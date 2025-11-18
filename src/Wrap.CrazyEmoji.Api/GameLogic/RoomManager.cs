@@ -1,7 +1,10 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
+using Wrap.CrazyEmoji.Api.Data;
+using Wrap.CrazyEmoji.Api.Data.Entities;
 using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
@@ -11,46 +14,79 @@ public class RoomManager
     private readonly IHubContext<RoomHub> _hubContext;
     private readonly IWordService _wordService;
     private readonly ILogger<RoomManager> _logger;
-    
+    private readonly GameDbContext _dbContext;
+
     private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
 
     private static readonly Random RandomGenerator = Random.Shared;
-    
+
     public RoomManager(
         IHubContext<RoomHub> hubContext,
         IWordService wordService,
-        ILogger<RoomManager> logger)
+        ILogger<RoomManager> logger,
+        GameDbContext dbContext)
     {
         _hubContext = hubContext;
         _wordService = wordService;
         _logger = logger;
+        _dbContext = dbContext;
     }
 
-    public Task<string?> CreateRoomAsync(string roomName)
+    public async Task<string?> CreateRoomAsync(string roomName)
     {
-        var roomCode = GenerateUniqueRoomCode();
-        return _rooms.TryAdd(roomCode, [])
-            ? Task.FromResult<string?>(roomCode)
-            : Task.FromResult<string?>(null);
+        try
+        {
+            var roomCode = await GenerateUniqueRoomCodeAsync();
+
+            var gameEntity = new GameEntity
+            {
+                RoomCode = roomCode,
+                RoomName = roomName,
+                MaxRound = 5,
+                CurrentRound = 0,
+                HostId = null
+            };
+
+            _dbContext.Games.Add(gameEntity);
+            await _dbContext.SaveChangesAsync();
+
+            _rooms.TryAdd(roomCode, new List<Player>());
+            _roomRounds.TryAdd(roomCode, 0);
+
+            _logger.LogInformation("Room {RoomCode} created with name '{RoomName}'",
+                roomCode, roomName);
+
+            return roomCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create room '{RoomName}'", roomName);
+            return null;
+        }
     }
 
-    private string GenerateUniqueRoomCode()
+    private async Task<string> GenerateUniqueRoomCodeAsync()
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         string roomCode;
         int attempts = 0;
         const int maxAttempts = 100;
+        bool existsInMemory;
+        bool existsInDb;
 
         do
         {
             roomCode = new string(Enumerable.Repeat(chars, 6)
                 .Select(s => s[RandomGenerator.Next(s.Length)]).ToArray());
             attempts++;
+
+            existsInMemory = _rooms.ContainsKey(roomCode);
+            existsInDb = await _dbContext.Games.AnyAsync(g => g.RoomCode == roomCode);
         }
-        while (_rooms.ContainsKey(roomCode) && attempts < maxAttempts);
+        while ((existsInMemory || existsInDb) && attempts < maxAttempts);
 
         if (attempts >= maxAttempts)
             throw new InvalidOperationException("Unable to generate unique room code after maximum attempts.");
@@ -60,14 +96,63 @@ public class RoomManager
 
     public async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
-        if (!_rooms.TryGetValue(roomCode, out var players))
-            throw new RoomNotFoundException(roomCode);
+        try
+        {
+            var gameEntity = await _dbContext.Games.FirstOrDefaultAsync(g => g.RoomCode == roomCode);
+            if (gameEntity == null)
+                throw new RoomNotFoundException(roomCode);
 
-        _logger.LogInformation("Player {Player} joining room {RoomCode}", player.Username, roomCode);
+            if (!_rooms.TryGetValue(roomCode, out var players))
+            {
+                var existingUsers = await _dbContext.Users
+                    .Where(u => u.RoomCode == roomCode)
+                    .ToListAsync();
 
-        players.Add(player);
-        await _hubContext.Groups.AddToGroupAsync(player.ConnectionId, roomCode);
-        return true;
+                players = existingUsers.Select(u => new Player(u.Username, "")).ToList();
+                _rooms.TryAdd(roomCode, players);
+                _roomRounds.TryAdd(roomCode, gameEntity.CurrentRound);
+            }
+
+            var existingUser = await _dbContext.Users
+                .FirstOrDefaultAsync(u => u.Username == player.Username && u.RoomCode == roomCode);
+
+            if (existingUser == null)
+            {
+                var userEntity = new UserEntity
+                {
+                    Username = player.Username,
+                    RoomCode = roomCode
+                };
+                _dbContext.Users.Add(userEntity);
+
+                if (gameEntity.HostId == null)
+                {
+                    gameEntity.HostId = userEntity.Id;
+                }
+
+                await _dbContext.SaveChangesAsync();
+            }
+
+            var existingPlayerInMemory = players.FirstOrDefault(p => p.Username == player.Username);
+            if (existingPlayerInMemory != null)
+            {
+                existingPlayerInMemory.ConnectionId = player.ConnectionId;
+            }
+            else
+            {
+                players.Add(player);
+            }
+
+            await _hubContext.Groups.AddToGroupAsync(player.ConnectionId, roomCode);
+
+            _logger.LogInformation("Player {Player} joined room {RoomCode}", player.Username, roomCode);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to add player {Player} to room {RoomCode}", player.Username, roomCode);
+            return false;
+        }
     }
 
     public async Task RemovePlayerAsync(string connectionId)
@@ -104,7 +189,7 @@ public class RoomManager
 
         _roomRounds[roomCode] = 0;
 
-        _ = Task.Run(async () =>
+        await Task.Run(async () =>
         {
             try
             {

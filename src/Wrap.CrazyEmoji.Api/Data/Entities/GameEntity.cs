@@ -14,9 +14,8 @@ public class GameEntity
     [Column("room_name")]
     public string RoomName { get; set; } = string.Empty;
 
-    [Required]
     [Column("host_id")]
-    public Guid HostId { get; set; }
+    public Guid? HostId { get; set; }
 
     [Column("max_round")]
     public int MaxRound { get; set; }

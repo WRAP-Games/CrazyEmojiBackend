@@ -24,7 +24,7 @@ public class GameDbContext : DbContext
             entity.HasOne(e => e.Host)
                   .WithMany()
                   .HasForeignKey(e => e.HostId)
-                  .OnDelete(DeleteBehavior.Restrict);
+                  .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasMany(e => e.Users)
                   .WithOne(u => u.Game)
