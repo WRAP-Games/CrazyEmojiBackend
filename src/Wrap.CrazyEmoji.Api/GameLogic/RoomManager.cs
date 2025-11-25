@@ -11,14 +11,14 @@ public class RoomManager
     private readonly IHubContext<RoomHub> _hubContext;
     private readonly IWordService _wordService;
     private readonly ILogger<RoomManager> _logger;
-    
+
     private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
 
     private static readonly Random RandomGenerator = Random.Shared;
-    
+
     public RoomManager(
         IHubContext<RoomHub> hubContext,
         IWordService wordService,
@@ -87,7 +87,7 @@ public class RoomManager
         }
     }
 
-    public async Task<bool> StartGameAsync(string roomCode)
+    public virtual async Task<bool> StartGameAsync(string roomCode)
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
