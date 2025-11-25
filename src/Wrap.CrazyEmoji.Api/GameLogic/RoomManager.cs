@@ -148,7 +148,7 @@ public class RoomManager
             }
         });
 
-        return Task.FromResult(true);
+        return true;
     }
 
     private async Task StartRoundAsync(string roomCode)
