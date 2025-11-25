@@ -329,6 +329,7 @@ public class UnitTestGameLogic
             default), Times.Once);
     }
     
+    [Fact]
     public async Task RoomManager_RemovePlayerAsync_WithNonExistentPlayer_ShouldNotThrow()
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
@@ -337,7 +338,6 @@ public class UnitTestGameLogic
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         await manager.CreateRoomAsync("Room1");
 
-        // Should not throw exception
         await manager.RemovePlayerAsync("non-existent-connection");
 
         mockClientProxy.Verify(c => c.SendCoreAsync(
@@ -1151,9 +1151,6 @@ public class UnitTestGameLogic
         mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
     }
     
-    
-    
-    
 
     //WordService tests
     [Fact]
@@ -1184,6 +1181,7 @@ public class UnitTestGameLogic
         Assert.Contains(word, new[] { "apple", "banana" });
     }
 
+    
     
 
 
