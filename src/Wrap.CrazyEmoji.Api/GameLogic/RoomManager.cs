@@ -2,28 +2,68 @@
 using Microsoft.AspNetCore.SignalR;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
+using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
-public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordService)
+public class RoomManager
 {
-    private readonly IHubContext<RoomHub> _hubContext = hubContext;
-    private readonly IWordService _wordService = wordService;
-
+    private readonly IHubContext<RoomHub> _hubContext;
+    private readonly IWordService _wordService;
+    private readonly ILogger<RoomManager> _logger;
+    
     private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
 
     private static readonly Random RandomGenerator = Random.Shared;
+    
+    public RoomManager(
+        IHubContext<RoomHub> hubContext,
+        IWordService wordService,
+        ILogger<RoomManager> logger)
+    {
+        _hubContext = hubContext;
+        _wordService = wordService;
+        _logger = logger;
+    }
 
-    public Task<bool> CreateRoomAsync(string roomCode)
-        => Task.FromResult(_rooms.TryAdd(roomCode, []));
+    public Task<string?> CreateRoomAsync(string roomName)
+    {
+        var roomCode = GenerateUniqueRoomCode();
+        return _rooms.TryAdd(roomCode, [])
+            ? Task.FromResult<string?>(roomCode)
+            : Task.FromResult<string?>(null);
+    }
+
+    private string GenerateUniqueRoomCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        string roomCode;
+        int attempts = 0;
+        const int maxAttempts = 100;
+
+        do
+        {
+            roomCode = new string(Enumerable.Repeat(chars, 6)
+                .Select(s => s[RandomGenerator.Next(s.Length)]).ToArray());
+            attempts++;
+        }
+        while (_rooms.ContainsKey(roomCode) && attempts < maxAttempts);
+
+        if (attempts >= maxAttempts)
+            throw new InvalidOperationException("Unable to generate unique room code after maximum attempts.");
+
+        return roomCode;
+    }
 
     public async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-            return false;
+            throw new RoomNotFoundException(roomCode);
+
+        _logger.LogInformation("Player {Player} joining room {RoomCode}", player.Username, roomCode);
 
         players.Add(player);
         await _hubContext.Groups.AddToGroupAsync(player.ConnectionId, roomCode);
@@ -35,8 +75,15 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
         foreach (var room in _rooms)
         {
             if (room.Value.RemoveAll(p => p.ConnectionId == connectionId) > 0)
+            {
+                _logger.LogInformation(
+                    "Player {ConnectionId} removed from room {RoomCode}",
+                    connectionId,
+                    room.Key);
+
                 await _hubContext.Clients.Group(room.Key)
                     .SendAsync(RoomHubConstants.PlayerLeft, connectionId);
+            }
         }
     }
 
@@ -44,9 +91,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Not enough players to start.");
-            return false;
+            throw new NotEnoughPlayersException(roomCode, players?.Count ?? 0);
         }
 
         foreach (var player in players)
@@ -66,6 +111,8 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 const int maxRounds = 10;
                 while (_roomRounds.TryGetValue(roomCode, out int currentRound) && currentRound < maxRounds)
                 {
+                    _logger.LogInformation("Starting round {Round} in room {RoomCode}", currentRound + 1, roomCode);
+
                     await StartRoundAsync(roomCode);
                     _roomRounds[roomCode] = currentRound + 1;
                 }
@@ -73,10 +120,29 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
                 await _hubContext.Clients.Group(roomCode)
                     .SendAsync("GameEnded", "The game has ended!");
             }
+            catch (RoomNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Room {RoomCode} not found", roomCode);
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
+            }
+            catch (NotEnoughPlayersException ex)
+            {
+                _logger.LogWarning(ex, "Not enough players in room {RoomCode}", roomCode);
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
+            }
+            catch (CommanderNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "Commander not found in room {RoomCode}", roomCode);
+                await _hubContext.Clients.Group(roomCode)
+                    .SendAsync(RoomHubConstants.Error, ex.Message);
+            }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Unexpected error in game loop for room {RoomCode}", roomCode);
                 await _hubContext.Clients.Group(roomCode)
-                    .SendAsync(RoomHubConstants.Error, $"An error occurred: {ex.Message}");
+                    .SendAsync(RoomHubConstants.Error, "An unexpected error occurred.");
             }
         });
 
@@ -114,9 +180,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Not enough players for commander selection.");
-            return;
+            throw new NotEnoughPlayersException(roomCode, players?.Count ?? 0);
         }
 
         int commanderIndex = RandomGenerator.Next(players.Count);
@@ -134,18 +198,12 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
         {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
+            throw new RoomNotFoundException(roomCode);
         }
 
         var commander = players.FirstOrDefault(p => p.Role == PlayerRole.Commander);
         if (commander is null)
-        {
-            await _hubContext.Clients.Group(roomCode)
-                .SendAsync(RoomHubConstants.Error, "Commander not found.");
-            return;
-        }
+            throw new CommanderNotFoundException(roomCode);
 
         var word = await _wordService.GetRandomWordAsync();
         _currentWords[roomCode] = word;
@@ -156,11 +214,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     public async Task SendEmojisAsync(string roomCode, string connectionId, string emojis)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-        {
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
-        }
+            throw new RoomNotFoundException(roomCode);
 
         var commander = players.FirstOrDefault(p => p.ConnectionId == connectionId);
         if (commander == null || commander.Role != PlayerRole.Commander)
@@ -178,11 +232,7 @@ public class RoomManager(IHubContext<RoomHub> hubContext, IWordService wordServi
     public async Task CheckWordAsync(string roomCode, string connectionId, string word)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
-        {
-            await _hubContext.Clients.Client(connectionId)
-                .SendAsync(RoomHubConstants.Error, "Room not found.");
-            return;
-        }
+            throw new RoomNotFoundException(roomCode);
 
         if (!_emojisSent.TryGetValue(roomCode, out var sent) || !sent)
         {

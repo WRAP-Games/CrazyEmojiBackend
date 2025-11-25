@@ -18,7 +18,7 @@ internal static class WebApplicationExtensions
         app.UseMiddleware<CorrelationIdMiddleware>();
         app.UseHttpsRedirection();
         app.UseExceptionHandler();
-        app.UseCors();
+        app.UseCors("ClientCors");
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapIdentityApi<IdentityUser>();
