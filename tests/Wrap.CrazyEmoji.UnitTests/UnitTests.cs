@@ -1491,7 +1491,7 @@ public class UnitTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
         var exception = new Exception("Test exception");
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         var result = await handler.TryHandleAsync(httpContext, exception, cts.Token);
 
