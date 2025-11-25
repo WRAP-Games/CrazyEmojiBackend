@@ -1,5 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -7,6 +9,7 @@ using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
 using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
+using Wrap.CrazyEmoji.Api.Infrastructure;
 using Wrap.CrazyEmoji.Api.Services;
 
 
@@ -1362,6 +1365,186 @@ public class UnitTests
         Assert.Contains(word, new[] { "apple", "banana" });
     }
 
+    
+    // GlobalExceptionHandler Tests
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldReturnTrue()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var exception = new Exception("Test exception");
+
+        var result = await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldSetStatusCodeTo500()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var exception = new Exception("Test exception");
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        Assert.Equal(500, httpContext.Response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldWriteJsonResponse()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var exception = new Exception("Test exception");
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        var responseText = await new StreamReader(httpContext.Response.Body).ReadToEndAsync();
+    
+        Assert.Contains("\"status\":500", responseText);
+        Assert.Contains("An unexpected error occurred", responseText);
+
+    }
+
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldLogError()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var exception = new Exception("Test exception message");
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Unhandled exception caught by global handler")),
+                exception,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldWriteProblemDetailsToResponse()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        httpContext.Response.Body = responseBody;
+        var exception = new Exception("Test exception");
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        responseBody.Seek(0, SeekOrigin.Begin);
+        var responseText = await new StreamReader(responseBody).ReadToEndAsync();
+    
+        Assert.Contains("\"status\":500", responseText);
+        Assert.Contains("\"title\":\"An unexpected error occurred.\"", responseText);
+        Assert.Contains("\"type\":\"https://datatracker.ietf.org/doc/html/rfc9110#name-500-internal-server-error\"", responseText);
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_WithDifferentExceptionTypes_ShouldHandleAll()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+    
+        var exceptions = new Exception[]
+        {
+            new InvalidOperationException("Invalid operation"),
+            new ArgumentException("Bad argument"),
+            new NullReferenceException("Null reference"),
+            new Exception("Generic exception")
+        };
+
+        foreach (var exception in exceptions)
+        {
+            var httpContext = new DefaultHttpContext();
+            httpContext.Response.Body = new MemoryStream();
+
+            var result = await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+            Assert.True(result);
+            Assert.Equal(500, httpContext.Response.StatusCode);
+        }
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_WithCancellationToken_ShouldPassTokenToWriteAsync()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var exception = new Exception("Test exception");
+        var cts = new CancellationTokenSource();
+
+        var result = await handler.TryHandleAsync(httpContext, exception, cts.Token);
+
+        Assert.True(result);
+        Assert.Equal(500, httpContext.Response.StatusCode);
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_ShouldIncludeCorrectProblemDetailsProperties()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        var responseBody = new MemoryStream();
+        httpContext.Response.Body = responseBody;
+        var exception = new Exception("Test exception");
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        responseBody.Seek(0, SeekOrigin.Begin);
+        using var jsonDoc = await JsonDocument.ParseAsync(responseBody);
+        var root = jsonDoc.RootElement;
+
+        Assert.True(root.TryGetProperty("status", out var status));
+        Assert.Equal(500, status.GetInt32());
+    
+        Assert.True(root.TryGetProperty("title", out var title));
+        Assert.Equal("An unexpected error occurred.", title.GetString());
+    
+        Assert.True(root.TryGetProperty("type", out var type));
+        Assert.Equal("https://datatracker.ietf.org/doc/html/rfc9110#name-500-internal-server-error", type.GetString());
+    }
+    
+    [Fact]
+    public async Task GlobalExceptionHandler_TryHandleAsync_WithExceptionContainingInnerException_ShouldLogBoth()
+    {
+        var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
+        var handler = new GlobalExceptionHandler(mockLogger.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Response.Body = new MemoryStream();
+        var innerException = new InvalidOperationException("Inner exception");
+        var exception = new Exception("Outer exception", innerException);
+
+        await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
+
+        mockLogger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                exception,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
     
     
 
