@@ -1450,7 +1450,8 @@ public class UnitTests
         await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
 
         responseBody.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(responseBody).ReadToEndAsync();
+        await using var reader = new StreamReader(responseBody);
+        var responseText = await reader.ReadToEndAsync();
     
         Assert.Contains("\"status\":500", responseText);
         Assert.Contains("\"title\":\"An unexpected error occurred.\"", responseText);
@@ -1491,7 +1492,7 @@ public class UnitTests
         var httpContext = new DefaultHttpContext();
         httpContext.Response.Body = new MemoryStream();
         var exception = new Exception("Test exception");
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
 
         var result = await handler.TryHandleAsync(httpContext, exception, cts.Token);
 

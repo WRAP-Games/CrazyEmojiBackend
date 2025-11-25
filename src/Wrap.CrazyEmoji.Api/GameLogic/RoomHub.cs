@@ -43,8 +43,8 @@ public class RoomHub : Hub
         var username = Context.Items.TryGetValue(RoomHubConstants.Username, out var usernameObj) 
                        && usernameObj is string usernameStr
             ? usernameStr
-            : Context.ConnectionId;        var player = new Player
-        {
+            : Context.ConnectionId;
+        var player = new Player
             ConnectionId = Context.ConnectionId,
             Username = username,
             Role = PlayerRole.Player
