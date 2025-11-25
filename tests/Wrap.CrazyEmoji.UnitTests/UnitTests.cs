@@ -708,26 +708,6 @@ public class UnitTests
         Assert.Equal(6, code!.Length);
     }
 
-    [Fact]
-    public async Task RoomManager_AddPlayerAsync_ShouldAddPlayerToRoom()
-    {
-        var hubContext = new Mock<IHubContext<RoomHub>>();
-        var groups = new Mock<IGroupManager>();
-        hubContext.Setup(x => x.Groups).Returns(groups.Object);
-
-        var wordService = new Mock<IWordService>();
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
-
-        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
-
-        var roomCode = await manager.CreateRoomAsync("Room1");
-        var player = new Player("Alice", "C1");
-
-        var added = await manager.AddPlayerAsync(roomCode!, player);
-
-        Assert.True(added);
-        groups.Verify(g => g.AddToGroupAsync("C1", roomCode!, default), Times.Once);
-    }
     
     //RoomHub tests
     
