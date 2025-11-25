@@ -10,10 +10,10 @@ internal static class AuthBootstrap
         services
             .AddAuthentication(options =>
             {
-                options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-                options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+                options.DefaultAuthenticateScheme = IdentityConstants.BearerScheme;
+                options.DefaultChallengeScheme = IdentityConstants.BearerScheme;
             })
-            .AddIdentityCookies();
+            .AddBearerToken(IdentityConstants.BearerScheme);
 
         services
             .AddAuthorization()
@@ -26,12 +26,6 @@ internal static class AuthBootstrap
             .AddEntityFrameworkStores<IdentityDbContext>()
             .AddApiEndpoints();
 
-        return services.ConfigureApplicationCookie(options =>
-        {
-            options.Cookie.Name = "CrazyEmojiAuth";
-            options.Cookie.HttpOnly = true;
-            options.Cookie.SameSite = SameSiteMode.None;
-            options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-        });
+        return services;
     }
 }
