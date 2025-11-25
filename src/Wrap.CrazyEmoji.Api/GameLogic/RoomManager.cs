@@ -89,7 +89,7 @@ public class RoomManager
         }
     }
 
-    public virtual Task<bool> StartGameAsync(string roomCode)
+    public virtual async Task<bool> StartGameAsync(string roomCode)
     {
         if (!_rooms.TryGetValue(roomCode, out var players) || players.Count < 3)
         {

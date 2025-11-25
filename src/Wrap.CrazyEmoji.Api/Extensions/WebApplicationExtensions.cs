@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Identity;
 using Scalar.AspNetCore;
+using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Middlewares;
 
 namespace Wrap.CrazyEmoji.Api.Extensions;
@@ -19,10 +21,10 @@ internal static class WebApplicationExtensions
         app.UseCors("ClientCors");
         app.UseAuthentication();
         app.UseAuthorization();
-        app.MapHub<RoomHub>("/roomHub");
+        app.MapIdentityApi<IdentityUser>();
+        app.MapHub<RoomHub>("/roomHub").RequireAuthorization();
         app.MapControllers();
 
         return app;
     }
-
 }

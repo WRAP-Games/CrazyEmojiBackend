@@ -17,7 +17,6 @@ namespace Wrap.CrazyEmoji.UnitTests;
 
 public class UnitTests
 {
-    
     //points tests
     [Theory]
     [InlineData(-1)]
@@ -26,7 +25,7 @@ public class UnitTests
     {
         Assert.Throws<ArgumentException>(() => new Points(invalidValue));
     }
-    
+  
     [Fact]
     public void Constructor_ValidValue_ShouldSetValue()
     {
@@ -42,7 +41,7 @@ public class UnitTests
         bool result = points.IsZero();
         Assert.True(result);
     }
-    
+
     [Fact]
     public void IsZero_WhenValueIsNotZero_ShouldReturnFalse()
     {
@@ -50,7 +49,7 @@ public class UnitTests
         bool result = points.IsZero();
         Assert.False(result);
     }
-    
+
     [Fact]
     public void AdditionOperator_ShouldReturnCorrectSum()
     {
@@ -59,7 +58,7 @@ public class UnitTests
         var result = p1 + p2;
         Assert.Equal(10, result.Value);
     }
-    
+
     [Fact]
     public void CompareTo_ShouldReturnCorrectComparisons()
     {
@@ -69,25 +68,24 @@ public class UnitTests
         Assert.True(larger.CompareTo(smaller) > 0);
         Assert.Equal(0, smaller.CompareTo(new Points(3)));
     }
-    
+
     [Fact]
     public void ToString_ShouldReturnValueAsString()
-    { 
+    {
         var points = new Points(15);
         var result = points.ToString();
         Assert.Equal("15", result);
     }
-    
-    
+
     //player role tests
-    
+
     [Fact]
     public void DefaultRole_ShouldBePlayer()
     {
         var player = new Player();
         Assert.Equal(PlayerRole.Player, player.Role);
     }
-    
+
     [Fact]
     public void CanAssignCommanderRole()
     {
@@ -95,7 +93,7 @@ public class UnitTests
         player.Role = PlayerRole.Commander;
         Assert.Equal(PlayerRole.Commander, player.Role);
     }
-    
+
     [Fact]
     public void PlayerRoleEnum_ShouldHaveExpectedValues()
     {
@@ -104,8 +102,7 @@ public class UnitTests
         Assert.Equal(0, (int)commander);
         Assert.Equal(1, (int)playerRole);
     }
-    
-    
+
     //player tests
     [Fact]
     public void Constructor_ValidValues_ShouldAssignProperties()
@@ -132,8 +129,7 @@ public class UnitTests
         string connectionId = "conn-1";
         Assert.Throws<ArgumentException>(() => new Player(username!, connectionId));
     }
-    
-    
+
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -143,7 +139,7 @@ public class UnitTests
         string username = "sussie";
         Assert.Throws<ArgumentException>(() => new Player(username, connectionId!));
     }
-    
+
     [Fact]
     public void Username_SetValidValue_ShouldUpdateProperty()
     {
@@ -152,7 +148,7 @@ public class UnitTests
 
         Assert.Equal("Bob", player.Username);
     }
-    
+
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -163,7 +159,7 @@ public class UnitTests
 
         Assert.Throws<ArgumentException>(() => player.Username = invalidValue!);
     }
-    
+
     [Fact]
     public void ConnectionId_SetValidValue_ShouldUpdateProperty()
     {
@@ -171,7 +167,7 @@ public class UnitTests
         player.ConnectionId = "new-id";
         Assert.Equal("new-id", player.ConnectionId);
     }
-    
+
     [Theory]
     [InlineData("")]
     [InlineData(" ")]
@@ -181,14 +177,14 @@ public class UnitTests
         var player = new Player("sussie", "id");
         Assert.Throws<ArgumentException>(() => player.ConnectionId = invalidValue!);
     }
-    
+
     [Fact]
     public void Points_InitialValue_ShouldBeZero()
     {
         var player = new Player();
         Assert.Equal(0, player.Points.Value);
     }
-    
+
     [Fact]
     public void CanSetRole()
     {
@@ -196,7 +192,7 @@ public class UnitTests
         player.Role = PlayerRole.Commander;
         Assert.Equal(PlayerRole.Commander, player.Role);
     }
-    
+
     [Fact]
     public void GuessFlags_CanBeUpdated()
     {
@@ -206,9 +202,8 @@ public class UnitTests
         Assert.True(player.HasGuessed);
         Assert.True(player.GuessedRight);
     }
-    
+
     // RoomManager tests
-    
     private Mock<IHubContext<RoomHub>> CreateMockHubContext(
         out Mock<IGroupManager> mockGroups,
         out Mock<IHubClients> mockClients,
@@ -225,7 +220,7 @@ public class UnitTests
         mockHub.Setup(x => x.Clients).Returns(mockClients.Object);
         mockClients.Setup(x => x.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
         mockClients.Setup(x => x.Client(It.IsAny<string>())).Returns(mockSingleClientProxy.Object);
-        
+
         return mockHub;
     }
 
@@ -260,7 +255,7 @@ public class UnitTests
         Assert.NotEqual(code2, code3);
         Assert.NotEqual(code1, code3);
     }
-    
+
     [Fact]
     public async Task RoomManager_AddPlayerAsync_WithValidRoomCode_ShouldAddPlayerToGroup()
     {
@@ -290,7 +285,7 @@ public class UnitTests
 
         Assert.Contains("INVALID", exception.Message);
     }
-    
+
     [Fact]
     public async Task RoomManager_AddPlayerAsync_MultiplePlayersToSameRoom_ShouldAddAll()
     {
@@ -312,7 +307,7 @@ public class UnitTests
         Assert.True(result3);
         mockGroups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), roomCode!, default), Times.Exactly(3));
     }
-    
+
     [Fact]
     public async Task RoomManager_RemovePlayerAsync_ShouldRemovePlayerFromRoom()
     {
@@ -331,7 +326,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString() == "conn-alice"),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_RemovePlayerAsync_WithNonExistentPlayer_ShouldNotThrow()
     {
@@ -348,7 +343,7 @@ public class UnitTests
             It.IsAny<object[]>(),
             default), Times.Never);
     }
-    
+
     [Fact]
     public async Task RoomManager_RemovePlayerAsync_ShouldRemoveFromCorrectRoomOnly()
     {
@@ -372,7 +367,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString() == "conn-1"),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_StartGameAsync_WithLessThanThreePlayers_ShouldThrowNotEnoughPlayersException()
     {
@@ -393,7 +388,7 @@ public class UnitTests
 
         Assert.Contains(roomCode!, exception.Message);
     }
-    
+
     [Fact]
     public async Task RoomManager_StartGameAsync_WithInvalidRoomCode_ShouldThrowNotEnoughPlayersException()
     {
@@ -418,7 +413,7 @@ public class UnitTests
         await Assert.ThrowsAsync<RoomNotFoundException>(() =>
             manager.SendEmojisAsync("INVALID", "conn-1", "😀😃😄"));
     }
-    
+
     [Fact]
     public async Task RoomManager_SendEmojisAsync_WhenNotCommander_ShouldSendError()
     {
@@ -438,8 +433,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("commander")),
             default), Times.Once);
     }
-    
-    
+
     [Fact]
     public async Task RoomManager_SendEmojisAsync_WithNonExistentPlayer_ShouldSendError()
     {
@@ -459,7 +453,7 @@ public class UnitTests
             It.IsAny<object[]>(),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WithInvalidRoomCode_ShouldThrowRoomNotFoundException()
     {
@@ -467,7 +461,7 @@ public class UnitTests
         var wordService = new Mock<IWordService>();
         var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
-        
+
         await Assert.ThrowsAsync<RoomNotFoundException>(() =>
             manager.CheckWordAsync("INVALID", "conn-1", "apple"));
     }
@@ -491,7 +485,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("emojis")),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WithCorrectWord_ShouldMarkPlayerAsCorrect()
     {
@@ -506,7 +500,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -519,7 +513,7 @@ public class UnitTests
         Assert.True(player.HasGuessed);
         Assert.True(player.GuessedRight);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WithIncorrectWord_ShouldMarkPlayerAsWrong()
     {
@@ -534,7 +528,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -547,7 +541,7 @@ public class UnitTests
         Assert.True(player.HasGuessed);
         Assert.False(player.GuessedRight);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_CaseInsensitive_ShouldMarkAsCorrect()
     {
@@ -562,7 +556,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -574,7 +568,7 @@ public class UnitTests
 
         Assert.True(player.GuessedRight);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WhenPlayerAlreadyGuessed_ShouldSendError()
     {
@@ -589,7 +583,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -604,7 +598,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("already guessed")),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_AsCommander_ShouldSendError()
     {
@@ -619,7 +613,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -634,7 +628,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("Commanders cannot guess")),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WithNonExistentPlayer_ShouldSendError()
     {
@@ -649,7 +643,7 @@ public class UnitTests
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
         var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -664,7 +658,7 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("not found")),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomManager_CheckWordAsync_WhenNoWordIsSet_ShouldSendError()
     {
@@ -678,7 +672,7 @@ public class UnitTests
         await manager.AddPlayerAsync(roomCode!, player);
 
         var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
-        
+
         manager.GetType()
             .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
             .SetValue(manager, emojisSent);
@@ -690,10 +684,9 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("No word set")),
             default), Times.Once);
     }
-    
-    
+
     //RoomHub tests
-    
+
     private RoomHub CreateRoomHub(
         out Mock<RoomManager> mockRoomManager,
         out Mock<HubCallerContext> mockContext,
@@ -735,7 +728,7 @@ public class UnitTests
     }
 
 
-    
+
     [Fact]
     public async Task RoomHub_SetUsername_WithValidUsername_ShouldSetInContextAndNotifyCaller()
     {
@@ -774,7 +767,7 @@ public class UnitTests
 
         await Assert.ThrowsAsync<ArgumentException>(() => hub.CreateRoom("   "));
     }
-    
+
     [Fact]
     public async Task RoomHub_SetUsername_CalledMultipleTimes_ShouldUpdateUsername()
     {
@@ -789,11 +782,11 @@ public class UnitTests
             It.IsAny<object[]>(),
             default), Times.Exactly(2));
     }
-    
+
     [Fact]
     public async Task RoomHub_CreateRoom_WithValidRoomName_ShouldCreateRoomAndJoin()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy,
             out _, out var mockGroups, out var contextItems);
         var roomName = "TestRoom";
         var roomCode = "ABC123";
@@ -814,11 +807,11 @@ public class UnitTests
             default), Times.Once);
         mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomHub_CreateRoom_WhenCreationFails_ShouldSendError()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy,
             out _, out _, out _);
         var roomName = "TestRoom";
 
@@ -832,12 +825,12 @@ public class UnitTests
             It.Is<object[]>(args => args.Length == 1 && args[0].ToString()!.Contains("Failed to create room")),
             default), Times.Once);
     }
-    
+
 
     [Fact]
     public async Task RoomHub_JoinRoom_WithValidRoomCode_ShouldJoinRoom()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy,
             out _, out _, out var contextItems);
         var roomCode = "ABC123";
         var username = "TestUser";
@@ -848,9 +841,9 @@ public class UnitTests
 
         await hub.JoinRoom(roomCode);
 
-        mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode, 
-            It.Is<Player>(p => p.ConnectionId == "test-connection-id" 
-                               && p.Username == username 
+        mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode,
+            It.Is<Player>(p => p.ConnectionId == "test-connection-id"
+                               && p.Username == username
                                && p.Role == PlayerRole.Player)), Times.Once);
         Assert.Equal(roomCode, contextItems[RoomHubConstants.RoomCode]);
         mockCallerProxy.Verify(c => c.SendCoreAsync(
@@ -858,7 +851,7 @@ public class UnitTests
             It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == roomCode),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomHub_JoinRoom_WithoutUsername_ShouldUseConnectionIdAsUsername()
     {
@@ -877,7 +870,7 @@ public class UnitTests
     [Fact]
     public async Task RoomHub_JoinRoom_WhenRoomNotFound_ShouldSendError()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy,
             out _, out _, out var contextItems);
         var roomCode = "INVALID";
 
@@ -897,7 +890,7 @@ public class UnitTests
     public async Task RoomHub_JoinRoom_WithNullRoomCode_ShouldThrowArgumentNullException()
     {
         var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out var contextItems);
-        contextItems[RoomHubConstants.Username] = "TestUser"; 
+        contextItems[RoomHubConstants.Username] = "TestUser";
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => hub.JoinRoom(null!));
     }
@@ -915,7 +908,7 @@ public class UnitTests
     public async Task RoomHub_JoinRoom_WithWhitespaceRoomCode_ShouldThrowArgumentException()
     {
         var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out var contextItems);
-        contextItems[RoomHubConstants.Username] = "TestUser"; 
+        contextItems[RoomHubConstants.Username] = "TestUser";
 
         await Assert.ThrowsAsync<ArgumentException>(() => hub.JoinRoom("   "));
     }
@@ -923,11 +916,11 @@ public class UnitTests
     [Fact]
     public async Task RoomHub_JoinRoom_WhenAlreadyInRoom_ShouldUpdateRoomCode()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out _, out _, out var contextItems);
         var firstRoomCode = "ROOM01";
         var secondRoomCode = "ROOM02";
-    
+
         contextItems[RoomHubConstants.RoomCode] = firstRoomCode;
 
         mockRoomManager.Setup(m => m.AddPlayerAsync(It.IsAny<string>(), It.IsAny<Player>()))
@@ -937,11 +930,11 @@ public class UnitTests
 
         Assert.Equal(secondRoomCode, contextItems[RoomHubConstants.RoomCode]);
     }
-    
+
     [Fact]
     public async Task RoomHub_StartGame_WhenInRoom_ShouldStartGameAndNotifyGroup()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out var mockGroupProxy, out _, out var contextItems);
         var roomCode = "ABC123";
         contextItems[RoomHubConstants.RoomCode] = roomCode;
@@ -957,11 +950,11 @@ public class UnitTests
             It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == roomCode),
             default), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomHub_StartGame_WhenNotInRoom_ShouldSendError()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy,
             out _, out _, out _);
 
         await hub.StartGame();
@@ -976,7 +969,7 @@ public class UnitTests
     [Fact]
     public async Task RoomHub_StartGame_WhenStartFails_ShouldNotNotifyGroup()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out var mockGroupProxy, out _, out var contextItems);
         var roomCode = "ABC123";
         contextItems[RoomHubConstants.RoomCode] = roomCode;
@@ -991,11 +984,11 @@ public class UnitTests
             It.IsAny<object[]>(),
             default), Times.Never);
     }
-    
+
     [Fact]
     public async Task RoomHub_GetAndSendEmojis_WhenInRoom_ShouldSendEmojisToRoomManager()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out _, out _, out var contextItems);
         var roomCode = "ABC123";
         var emojis = "😀😃😄";
@@ -1015,15 +1008,15 @@ public class UnitTests
         await hub.GetAndSendEmojis(emojis);
 
         mockRoomManager.Verify(m => m.SendEmojisAsync(
-            It.IsAny<string>(), 
-            It.IsAny<string>(), 
+            It.IsAny<string>(),
+            It.IsAny<string>(),
             It.IsAny<string>()), Times.Never);
     }
-    
+
     [Fact]
     public async Task RoomHub_GetAndSendEmojis_WithEmptyEmojis_ShouldStillCallRoomManager()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out _, out _, out var contextItems);
         var roomCode = "ABC123";
         contextItems[RoomHubConstants.RoomCode] = roomCode;
@@ -1037,7 +1030,7 @@ public class UnitTests
     [Fact]
     public async Task RoomHub_CheckWord_WhenInRoom_ShouldCheckWordWithRoomManager()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out _, out _, out var contextItems);
         var roomCode = "ABC123";
         var word = "apple";
@@ -1047,7 +1040,7 @@ public class UnitTests
 
         mockRoomManager.Verify(m => m.CheckWordAsync(roomCode, "test-connection-id", word), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomHub_CheckWord_WhenNotInRoom_ShouldNotCallRoomManager()
     {
@@ -1065,7 +1058,7 @@ public class UnitTests
     [Fact]
     public async Task RoomHub_CheckWord_WithEmptyWord_ShouldStillCallRoomManager()
     {
-        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _,
             out _, out _, out var contextItems);
         var roomCode = "ABC123";
         contextItems[RoomHubConstants.RoomCode] = roomCode;
@@ -1074,7 +1067,7 @@ public class UnitTests
 
         mockRoomManager.Verify(m => m.CheckWordAsync(roomCode, "test-connection-id", ""), Times.Once);
     }
-    
+
     [Fact]
     public async Task RoomHub_OnDisconnectedAsync_ShouldRemovePlayerFromRoomManager()
     {
@@ -1100,189 +1093,20 @@ public class UnitTests
     public async Task RoomHub_OnDisconnectedAsync_ShouldCallBaseMethod()
     {
         var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
-    
+
         var exception = await Record.ExceptionAsync(() => hub.OnDisconnectedAsync(null));
-    
+
         Assert.Null(exception);
         mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
     }
-    
+
     // GameCache tests
-    
+
     private class TestCacheItem
     {
         public string Name { get; set; } = string.Empty;
         public int Value { get; set; }
     }
-
-    [Fact]
-    public void GameCache_Add_ShouldStoreItem()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var item = new TestCacheItem { Name = "Test", Value = 42 };
-
-        cache.Add("key1", item);
-
-        var retrieved = cache.Get("key1");
-        Assert.NotNull(retrieved);
-        Assert.Equal("Test", retrieved.Name);
-        Assert.Equal(42, retrieved.Value);
-    }
-
-    [Fact]
-    public void GameCache_Get_WithNonExistentKey_ShouldReturnNull()
-    {
-        var cache = new GameCache<TestCacheItem>();
-
-        var result = cache.Get("nonexistent");
-
-        Assert.Null(result);
-    }
-    
-    [Fact]
-    public void GameCache_Add_WithSameKey_ShouldOverwriteValue()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var item1 = new TestCacheItem { Name = "First", Value = 1 };
-        var item2 = new TestCacheItem { Name = "Second", Value = 2 };
-
-        cache.Add("key1", item1);
-        cache.Add("key1", item2);
-
-        var retrieved = cache.Get("key1");
-        Assert.NotNull(retrieved);
-        Assert.Equal("Second", retrieved.Name);
-        Assert.Equal(2, retrieved.Value);
-    }
-
-    [Fact]
-    public void GameCache_Add_MultipleDifferentKeys_ShouldStoreAll()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var item1 = new TestCacheItem { Name = "First", Value = 1 };
-        var item2 = new TestCacheItem { Name = "Second", Value = 2 };
-        var item3 = new TestCacheItem { Name = "Third", Value = 3 };
-
-        cache.Add("key1", item1);
-        cache.Add("key2", item2);
-        cache.Add("key3", item3);
-
-        Assert.Equal("First", cache.Get("key1")!.Name);
-        Assert.Equal("Second", cache.Get("key2")!.Name);
-        Assert.Equal("Third", cache.Get("key3")!.Name);
-    }
-    
-    [Fact]
-    public void GameCache_GetBest_WithIntegers_ShouldReturnMaximum()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var numbers = new[] { 5, 12, 3, 8, 15, 1 };
-
-        var result = cache.GetBest(numbers);
-
-        Assert.Equal(15, result);
-    }
-
-    [Fact]
-    public void GameCache_GetBest_WithStrings_ShouldReturnLastAlphabetically()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var strings = new[] { "apple", "banana", "zebra", "cherry" };
-
-        var result = cache.GetBest(strings);
-
-        Assert.Equal("zebra", result);
-    }
-
-    [Fact]
-    public void GameCache_GetBest_WithSingleItem_ShouldReturnThatItem()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var numbers = new[] { 42 };
-
-        var result = cache.GetBest(numbers);
-
-        Assert.Equal(42, result);
-    }
-    
-    [Fact]
-    public void GameCache_GetBest_WithPoints_ShouldReturnMaximum()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var points = new[] { new Points(10), new Points(25), new Points(5), new Points(20) };
-
-        var result = cache.GetBest(points);
-
-        Assert.Equal(25, result.Value);
-    }
-
-    [Fact]
-    public void GameCache_GetBest_WithNegativeNumbers_ShouldReturnLargest()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var numbers = new[] { -5, -12, -3, -8 };
-
-        var result = cache.GetBest(numbers);
-
-        Assert.Equal(-3, result);
-    }
-
-    
-    [Fact]
-    public void GameCache_StoreValue_ShouldCreateWrapper()
-    {
-        var cache = new GameCache<TestCacheItem>();
-
-        cache.StoreValue("key1", 42);
-
-        var result = cache.Get("key1");
-        Assert.NotNull(result);
-    }
-
-    [Fact]
-    public void GameCache_StoreValue_WithDifferentValueTypes_ShouldStoreAll()
-    {
-        var cache = new GameCache<TestCacheItem>();
-
-        cache.StoreValue("int", 42);
-        cache.StoreValue("double", 3.14);
-        cache.StoreValue("bool", true);
-
-        Assert.NotNull(cache.Get("int"));
-        Assert.NotNull(cache.Get("double"));
-        Assert.NotNull(cache.Get("bool"));
-    }
-    
-    [Fact]
-    public void GameCache_Add_WithNullKey_ShouldThrowArgumentNullException()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var item = new TestCacheItem();
-
-        Assert.Throws<ArgumentNullException>(() => cache.Add(null!, item));
-    }
-
-    [Fact]
-    public void GameCache_Get_WithNullKey_ShouldThrowArgumentNullException()
-    {
-        var cache = new GameCache<TestCacheItem>();
-
-        Assert.Throws<ArgumentNullException>(() => cache.Get(null!));
-    }
-
-    [Fact]
-    public void GameCache_Add_WithEmptyKey_ShouldStoreItem()
-    {
-        var cache = new GameCache<TestCacheItem>();
-        var item = new TestCacheItem { Name = "Empty Key Test" };
-
-        cache.Add("", item);
-
-        var retrieved = cache.Get("");
-        Assert.NotNull(retrieved);
-        Assert.Equal("Empty Key Test", retrieved.Name);
-    }
-    
 
     //WordService tests
     [Fact]
@@ -1313,9 +1137,9 @@ public class UnitTests
         Assert.Contains(word, new[] { "apple", "banana" });
     }
 
-    
+
     // GlobalExceptionHandler Tests
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_ShouldReturnTrue()
     {
@@ -1343,7 +1167,7 @@ public class UnitTests
 
         Assert.Equal(500, httpContext.Response.StatusCode);
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_ShouldWriteJsonResponse()
     {
@@ -1358,7 +1182,7 @@ public class UnitTests
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(httpContext.Response.Body);
         var responseText = await reader.ReadToEndAsync();
-    
+
         Assert.Contains("\"status\":500", responseText);
         Assert.Contains("An unexpected error occurred", responseText);
 
@@ -1384,7 +1208,7 @@ public class UnitTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_ShouldWriteProblemDetailsToResponse()
     {
@@ -1400,18 +1224,18 @@ public class UnitTests
         responseBody.Seek(0, SeekOrigin.Begin);
         using var reader = new StreamReader(responseBody);
         var responseText = await reader.ReadToEndAsync();
-    
+
         Assert.Contains("\"status\":500", responseText);
         Assert.Contains("\"title\":\"An unexpected error occurred.\"", responseText);
         Assert.Contains("\"type\":\"https://datatracker.ietf.org/doc/html/rfc9110#name-500-internal-server-error\"", responseText);
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_WithDifferentExceptionTypes_ShouldHandleAll()
     {
         var mockLogger = new Mock<ILogger<GlobalExceptionHandler>>();
         var handler = new GlobalExceptionHandler(mockLogger.Object);
-    
+
         var exceptions = new Exception[]
         {
             new InvalidOperationException("Invalid operation"),
@@ -1431,7 +1255,7 @@ public class UnitTests
             Assert.Equal(500, httpContext.Response.StatusCode);
         }
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_WithCancellationToken_ShouldPassTokenToWriteAsync()
     {
@@ -1447,7 +1271,7 @@ public class UnitTests
         Assert.True(result);
         Assert.Equal(500, httpContext.Response.StatusCode);
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_ShouldIncludeCorrectProblemDetailsProperties()
     {
@@ -1466,14 +1290,14 @@ public class UnitTests
 
         Assert.True(root.TryGetProperty("status", out var status));
         Assert.Equal(500, status.GetInt32());
-    
+
         Assert.True(root.TryGetProperty("title", out var title));
         Assert.Equal("An unexpected error occurred.", title.GetString());
-    
+
         Assert.True(root.TryGetProperty("type", out var type));
         Assert.Equal("https://datatracker.ietf.org/doc/html/rfc9110#name-500-internal-server-error", type.GetString());
     }
-    
+
     [Fact]
     public async Task GlobalExceptionHandler_TryHandleAsync_WithExceptionContainingInnerException_ShouldLogBoth()
     {
@@ -1495,8 +1319,4 @@ public class UnitTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-    
-    
-
-
 }

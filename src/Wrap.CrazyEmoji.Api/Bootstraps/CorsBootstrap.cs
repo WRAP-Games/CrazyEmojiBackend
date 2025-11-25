@@ -11,7 +11,8 @@ internal static class CorsBootstrap
                 builder.WithOrigins("http://localhost:4200")
                     .AllowCredentials()
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
     }
