@@ -207,7 +207,7 @@ public class UnitTests
         Assert.True(player.GuessedRight);
     }
     
-    // roomManager test
+    // RoomManager tests
     
     private Mock<IHubContext<RoomHub>> CreateMockHubContext(
         out Mock<IGroupManager> mockGroups,
