@@ -40,9 +40,11 @@ public class RoomHub : Hub
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(roomCode);
 
-        var username = Context.Items[RoomHubConstants.Username] as string ?? Context.ConnectionId;
-        var player = new Player
-        {
+        var username = Context.Items.TryGetValue(RoomHubConstants.Username, out var usernameObj) 
+                       && usernameObj is string usernameStr
+            ? usernameStr
+            : Context.ConnectionId;
+        var player = new Player{
             ConnectionId = Context.ConnectionId,
             Username = username,
             Role = PlayerRole.Player
@@ -61,7 +63,8 @@ public class RoomHub : Hub
 
     public async Task StartGame()
     {
-        if (Context.Items[RoomHubConstants.RoomCode] is not string roomCode)
+        if (!Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
+            || roomCodeObj is not string roomCode)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error, "You are not in a room.");
             return;
@@ -73,14 +76,20 @@ public class RoomHub : Hub
 
     public async Task GetAndSendEmojis(string emojis)
     {
-        if (Context.Items[RoomHubConstants.RoomCode] is string roomCode)
+        if (Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
+            && roomCodeObj is string roomCode)
+        {
             await _roomManager.SendEmojisAsync(roomCode, Context.ConnectionId, emojis);
+        }
     }
 
     public async Task CheckWord(string word)
     {
-        if (Context.Items[RoomHubConstants.RoomCode] is string roomCode)
+        if (Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
+            && roomCodeObj is string roomCode)
+        {
             await _roomManager.CheckWordAsync(roomCode, Context.ConnectionId, word);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
