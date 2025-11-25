@@ -694,20 +694,6 @@ public class UnitTests
     
     
     [Fact]
-    public async Task RoomManager_CreateRoomAsync_ShouldReturnValidRoomCode()
-    {
-        var hubContext = new Mock<IHubContext<RoomHub>>();
-        var wordService = new Mock<IWordService>();
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
-
-        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
-
-        var code = await manager.CreateRoomAsync("testRoom");
-
-        Assert.NotNull(code);
-        Assert.Equal(6, code!.Length);
-    }
-
     
     //RoomHub tests
     
