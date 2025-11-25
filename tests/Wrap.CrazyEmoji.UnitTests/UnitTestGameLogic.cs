@@ -755,7 +755,10 @@ public class UnitTestGameLogic
         mockRoomManager = new Mock<RoomManager>(
             Mock.Of<IHubContext<RoomHub>>(),
             Mock.Of<IWordService>(),
-            Mock.Of<ILogger<RoomManager>>());
+            Mock.Of<ILogger<RoomManager>>())
+        {
+            CallBase = false
+        };
 
         mockContext = new Mock<HubCallerContext>();
         mockClients = new Mock<IHubCallerClients>();
@@ -779,6 +782,8 @@ public class UnitTestGameLogic
 
         return hub;
     }
+
+
     
     [Fact]
     public async Task RoomHub_SetUsername_WithValidUsername_ShouldSetInContextAndNotifyCaller()
@@ -1149,6 +1154,182 @@ public class UnitTestGameLogic
     
         Assert.Null(exception);
         mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
+    }
+    
+    // GameCache tests
+    
+    private class TestCacheItem
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Value { get; set; }
+    }
+
+    [Fact]
+    public void GameCache_Add_ShouldStoreItem()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var item = new TestCacheItem { Name = "Test", Value = 42 };
+
+        cache.Add("key1", item);
+
+        var retrieved = cache.Get("key1");
+        Assert.NotNull(retrieved);
+        Assert.Equal("Test", retrieved.Name);
+        Assert.Equal(42, retrieved.Value);
+    }
+
+    [Fact]
+    public void GameCache_Get_WithNonExistentKey_ShouldReturnNull()
+    {
+        var cache = new GameCache<TestCacheItem>();
+
+        var result = cache.Get("nonexistent");
+
+        Assert.Null(result);
+    }
+    
+    [Fact]
+    public void GameCache_Add_WithSameKey_ShouldOverwriteValue()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var item1 = new TestCacheItem { Name = "First", Value = 1 };
+        var item2 = new TestCacheItem { Name = "Second", Value = 2 };
+
+        cache.Add("key1", item1);
+        cache.Add("key1", item2);
+
+        var retrieved = cache.Get("key1");
+        Assert.NotNull(retrieved);
+        Assert.Equal("Second", retrieved.Name);
+        Assert.Equal(2, retrieved.Value);
+    }
+
+    [Fact]
+    public void GameCache_Add_MultipleDifferentKeys_ShouldStoreAll()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var item1 = new TestCacheItem { Name = "First", Value = 1 };
+        var item2 = new TestCacheItem { Name = "Second", Value = 2 };
+        var item3 = new TestCacheItem { Name = "Third", Value = 3 };
+
+        cache.Add("key1", item1);
+        cache.Add("key2", item2);
+        cache.Add("key3", item3);
+
+        Assert.Equal("First", cache.Get("key1")!.Name);
+        Assert.Equal("Second", cache.Get("key2")!.Name);
+        Assert.Equal("Third", cache.Get("key3")!.Name);
+    }
+    
+    [Fact]
+    public void GameCache_GetBest_WithIntegers_ShouldReturnMaximum()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var numbers = new[] { 5, 12, 3, 8, 15, 1 };
+
+        var result = cache.GetBest(numbers);
+
+        Assert.Equal(15, result);
+    }
+
+    [Fact]
+    public void GameCache_GetBest_WithStrings_ShouldReturnLastAlphabetically()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var strings = new[] { "apple", "banana", "zebra", "cherry" };
+
+        var result = cache.GetBest(strings);
+
+        Assert.Equal("zebra", result);
+    }
+
+    [Fact]
+    public void GameCache_GetBest_WithSingleItem_ShouldReturnThatItem()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var numbers = new[] { 42 };
+
+        var result = cache.GetBest(numbers);
+
+        Assert.Equal(42, result);
+    }
+    
+    [Fact]
+    public void GameCache_GetBest_WithPoints_ShouldReturnMaximum()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var points = new[] { new Points(10), new Points(25), new Points(5), new Points(20) };
+
+        var result = cache.GetBest(points);
+
+        Assert.Equal(25, result.Value);
+    }
+
+    [Fact]
+    public void GameCache_GetBest_WithNegativeNumbers_ShouldReturnLargest()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var numbers = new[] { -5, -12, -3, -8 };
+
+        var result = cache.GetBest(numbers);
+
+        Assert.Equal(-3, result);
+    }
+
+    
+    [Fact]
+    public void GameCache_StoreValue_ShouldCreateWrapper()
+    {
+        var cache = new GameCache<TestCacheItem>();
+
+        cache.StoreValue("key1", 42);
+
+        var result = cache.Get("key1");
+        Assert.NotNull(result);
+    }
+
+    [Fact]
+    public void GameCache_StoreValue_WithDifferentValueTypes_ShouldStoreAll()
+    {
+        var cache = new GameCache<TestCacheItem>();
+
+        cache.StoreValue("int", 42);
+        cache.StoreValue("double", 3.14);
+        cache.StoreValue("bool", true);
+
+        Assert.NotNull(cache.Get("int"));
+        Assert.NotNull(cache.Get("double"));
+        Assert.NotNull(cache.Get("bool"));
+    }
+    
+    [Fact]
+    public void GameCache_Add_WithNullKey_ShouldThrowArgumentNullException()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var item = new TestCacheItem();
+
+        Assert.Throws<ArgumentNullException>(() => cache.Add(null!, item));
+    }
+
+    [Fact]
+    public void GameCache_Get_WithNullKey_ShouldThrowArgumentNullException()
+    {
+        var cache = new GameCache<TestCacheItem>();
+
+        Assert.Throws<ArgumentNullException>(() => cache.Get(null!));
+    }
+
+    [Fact]
+    public void GameCache_Add_WithEmptyKey_ShouldStoreItem()
+    {
+        var cache = new GameCache<TestCacheItem>();
+        var item = new TestCacheItem { Name = "Empty Key Test" };
+
+        cache.Add("", item);
+
+        var retrieved = cache.Get("");
+        Assert.NotNull(retrieved);
+        Assert.Equal("Empty Key Test", retrieved.Name);
     }
     
 
