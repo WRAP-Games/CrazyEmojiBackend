@@ -1,9 +1,14 @@
-﻿using System.Text;
+﻿using System.Collections.Concurrent;
+using System.Text;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using Moq;
+using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
 using Wrap.CrazyEmoji.Api.GameLogic;
+using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 using Wrap.CrazyEmoji.Api.Services;
+
 
 namespace Wrap.CrazyEmoji.UnitTests;
 
@@ -198,6 +203,96 @@ public class UnitTestGameLogic
         Assert.True(player.HasGuessed);
         Assert.True(player.GuessedRight);
     }
+    
+    // roomManager test
+    
+    [Fact]
+    public async Task RoomManager_CreateRoomAsync_ShouldReturnValidRoomCode()
+    {
+        var hubContext = new Mock<IHubContext<RoomHub>>();
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var code = await manager.CreateRoomAsync("testRoom");
+
+        Assert.NotNull(code);
+        Assert.Equal(6, code!.Length);
+    }
+
+    [Fact]
+    public async Task RoomManager_AddPlayerAsync_ShouldAddPlayerToRoom()
+    {
+        var hubContext = new Mock<IHubContext<RoomHub>>();
+        var groups = new Mock<IGroupManager>();
+        hubContext.Setup(x => x.Groups).Returns(groups.Object);
+
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var roomCode = await manager.CreateRoomAsync("Room1");
+        var player = new Player("Alice", "C1");
+
+        var added = await manager.AddPlayerAsync(roomCode!, player);
+
+        Assert.True(added);
+        groups.Verify(g => g.AddToGroupAsync("C1", roomCode!, default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_AddPlayerAsync_ShouldThrow_WhenRoomNotFound()
+    {
+        var hubContext = new Mock<IHubContext<RoomHub>>();
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var player = new Player("Bob", "C22");
+
+        await Assert.ThrowsAsync<RoomNotFoundException>(() =>
+            manager.AddPlayerAsync("INVALID", player));
+    }
+    
+
+
+    
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_ShouldMarkCorrectGuess()
+    {
+        var hubContext = new Mock<IHubContext<RoomHub>>();
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var roomCode = await manager.CreateRoomAsync("Room3");
+
+        var commander = new Player("Cmd", "CMD") { Role = PlayerRole.Commander };
+        await manager.AddPlayerAsync(roomCode!, commander);
+
+        var p = new Player("P", "P1");
+        await manager.AddPlayerAsync(roomCode!, p);
+
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, new ConcurrentDictionary<string, bool> { [roomCode!] = true });
+
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, new ConcurrentDictionary<string, string> { [roomCode!] = "apple" });
+
+        await manager.CheckWordAsync(roomCode!, "P1", "apple");
+
+        Assert.True(p.GuessedRight);
+    }
+
+
+
     
 
     //WordService tests
