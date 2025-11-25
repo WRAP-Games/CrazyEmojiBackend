@@ -206,6 +206,490 @@ public class UnitTestGameLogic
     
     // roomManager test
     
+    private Mock<IHubContext<RoomHub>> CreateMockHubContext(
+        out Mock<IGroupManager> mockGroups,
+        out Mock<IHubClients> mockClients,
+        out Mock<ISingleClientProxy> mockSingleClientProxy,
+        out Mock<IClientProxy> mockClientProxy)
+    {
+        var mockHub = new Mock<IHubContext<RoomHub>>();
+        mockGroups = new Mock<IGroupManager>();
+        mockClients = new Mock<IHubClients>();
+        mockSingleClientProxy = new Mock<ISingleClientProxy>();
+        mockClientProxy = new Mock<IClientProxy>();
+
+        mockHub.Setup(x => x.Groups).Returns(mockGroups.Object);
+        mockHub.Setup(x => x.Clients).Returns(mockClients.Object);
+        mockClients.Setup(x => x.Group(It.IsAny<string>())).Returns(mockClientProxy.Object);
+        mockClients.Setup(x => x.Client(It.IsAny<string>())).Returns(mockSingleClientProxy.Object);
+        
+        return mockHub;
+    }
+
+    [Fact]
+    public async Task RoomManager_CreateRoomAsync_ShouldReturnUniqueSixCharacterCode()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var roomCode = await manager.CreateRoomAsync("TestRoom");
+
+        Assert.NotNull(roomCode);
+        Assert.Equal(6, roomCode!.Length);
+        Assert.Matches(@"^[A-Z0-9]{6}$", roomCode);
+    }
+
+    [Fact]
+    public async Task RoomManager_CreateRoomAsync_CalledMultipleTimes_ShouldReturnDifferentCodes()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        var code1 = await manager.CreateRoomAsync("Room1");
+        var code2 = await manager.CreateRoomAsync("Room2");
+        var code3 = await manager.CreateRoomAsync("Room3");
+
+        Assert.NotEqual(code1, code2);
+        Assert.NotEqual(code2, code3);
+        Assert.NotEqual(code1, code3);
+    }
+    
+    [Fact]
+    public async Task RoomManager_AddPlayerAsync_WithValidRoomCode_ShouldAddPlayerToGroup()
+    {
+        var hubContext = CreateMockHubContext(out var mockGroups, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+        var player = new Player("Alice", "conn-alice");
+
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        mockGroups.Verify(g => g.AddToGroupAsync("conn-alice", roomCode!, default), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomManager_AddPlayerAsync_WithInvalidRoomCode_ShouldThrowRoomNotFoundException()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var player = new Player("Bob", "conn-bob");
+
+        var exception = await Assert.ThrowsAsync<RoomNotFoundException>(() =>
+            manager.AddPlayerAsync("INVALID", player));
+
+        Assert.Contains("INVALID", exception.Message);
+    }
+    
+    [Fact]
+    public async Task RoomManager_AddPlayerAsync_MultiplePlayersToSameRoom_ShouldAddAll()
+    {
+        var hubContext = CreateMockHubContext(out var mockGroups, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+        var player1 = new Player("Alice", "conn-1");
+        var player2 = new Player("Bob", "conn-2");
+        var player3 = new Player("Charlie", "conn-3");
+
+        var result1 = await manager.AddPlayerAsync(roomCode!, player1);
+        var result2 = await manager.AddPlayerAsync(roomCode!, player2);
+        var result3 = await manager.AddPlayerAsync(roomCode!, player3);
+
+        Assert.True(result1);
+        Assert.True(result2);
+        Assert.True(result3);
+        mockGroups.Verify(g => g.AddToGroupAsync(It.IsAny<string>(), roomCode!, default), Times.Exactly(3));
+    }
+    
+    [Fact]
+    public async Task RoomManager_RemovePlayerAsync_ShouldRemovePlayerFromRoom()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+        var player = new Player("Alice", "conn-alice");
+
+        await manager.AddPlayerAsync(roomCode!, player);
+        await manager.RemovePlayerAsync("conn-alice");
+
+        mockClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.PlayerLeft,
+            It.Is<object[]>(args => args[0].ToString() == "conn-alice"),
+            default), Times.Once);
+    }
+    
+    public async Task RoomManager_RemovePlayerAsync_WithNonExistentPlayer_ShouldNotThrow()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        await manager.CreateRoomAsync("Room1");
+
+        // Should not throw exception
+        await manager.RemovePlayerAsync("non-existent-connection");
+
+        mockClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.PlayerLeft,
+            It.IsAny<object[]>(),
+            default), Times.Never);
+    }
+    
+    [Fact]
+    public async Task RoomManager_RemovePlayerAsync_ShouldRemoveFromCorrectRoomOnly()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode1 = await manager.CreateRoomAsync("Room1");
+        var roomCode2 = await manager.CreateRoomAsync("Room2");
+
+        var player1 = new Player("Alice", "conn-1");
+        var player2 = new Player("Bob", "conn-2");
+
+        await manager.AddPlayerAsync(roomCode1!, player1);
+        await manager.AddPlayerAsync(roomCode2!, player2);
+
+        await manager.RemovePlayerAsync("conn-1");
+
+        mockClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.PlayerLeft,
+            It.Is<object[]>(args => args[0].ToString() == "conn-1"),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_StartGameAsync_WithLessThanThreePlayers_ShouldThrowNotEnoughPlayersException()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player1 = new Player("Alice", "conn-1");
+        var player2 = new Player("Bob", "conn-2");
+
+        await manager.AddPlayerAsync(roomCode!, player1);
+        await manager.AddPlayerAsync(roomCode!, player2);
+
+        var exception = await Assert.ThrowsAsync<NotEnoughPlayersException>(() =>
+            manager.StartGameAsync(roomCode!));
+
+        Assert.Contains(roomCode!, exception.Message);
+    }
+    
+    [Fact]
+    public async Task RoomManager_StartGameAsync_WithInvalidRoomCode_ShouldThrowNotEnoughPlayersException()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        await Assert.ThrowsAsync<NotEnoughPlayersException>(() =>
+            manager.StartGameAsync("INVALID"));
+    }
+
+
+    [Fact]
+    public async Task RoomManager_SendEmojisAsync_WithInvalidRoomCode_ShouldThrowRoomNotFoundException()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+
+        await Assert.ThrowsAsync<RoomNotFoundException>(() =>
+            manager.SendEmojisAsync("INVALID", "conn-1", "😀😃😄"));
+    }
+    
+    [Fact]
+    public async Task RoomManager_SendEmojisAsync_WhenNotCommander_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1") { Role = PlayerRole.Player };
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        await manager.SendEmojisAsync(roomCode!, "conn-1", "😀😃😄");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("commander")),
+            default), Times.Once);
+    }
+    
+    
+    [Fact]
+    public async Task RoomManager_SendEmojisAsync_WithNonExistentPlayer_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        await manager.SendEmojisAsync(roomCode!, "conn-nonexistent", "😀😃😄");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.IsAny<object[]>(),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WithInvalidRoomCode_ShouldThrowRoomNotFoundException()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        
+        await Assert.ThrowsAsync<RoomNotFoundException>(() =>
+            manager.CheckWordAsync("INVALID", "conn-1", "apple"));
+    }
+
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_BeforeEmojisAreSent_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "apple");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("emojis")),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WithCorrectWord_ShouldMarkPlayerAsCorrect()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "apple");
+
+        Assert.True(player.HasGuessed);
+        Assert.True(player.GuessedRight);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WithIncorrectWord_ShouldMarkPlayerAsWrong()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "banana");
+
+        Assert.True(player.HasGuessed);
+        Assert.False(player.GuessedRight);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_CaseInsensitive_ShouldMarkAsCorrect()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out _, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "APPLE");
+
+        Assert.True(player.GuessedRight);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WhenPlayerAlreadyGuessed_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1") { HasGuessed = true };
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "apple");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("already guessed")),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_AsCommander_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var commander = new Player("Alice", "conn-1") { Role = PlayerRole.Commander };
+        await manager.AddPlayerAsync(roomCode!, commander);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "apple");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("Commanders cannot guess")),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WithNonExistentPlayer_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        var currentWords = new ConcurrentDictionary<string, string> { [roomCode!] = "apple" };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+        manager.GetType()
+            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, currentWords);
+
+        await manager.CheckWordAsync(roomCode!, "conn-nonexistent", "apple");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("not found")),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomManager_CheckWordAsync_WhenNoWordIsSet_ShouldSendError()
+    {
+        var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
+        var wordService = new Mock<IWordService>();
+        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
+        var roomCode = await manager.CreateRoomAsync("Room1");
+
+        var player = new Player("Alice", "conn-1");
+        await manager.AddPlayerAsync(roomCode!, player);
+
+        var emojisSent = new ConcurrentDictionary<string, bool> { [roomCode!] = true };
+        
+        manager.GetType()
+            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .SetValue(manager, emojisSent);
+
+        await manager.CheckWordAsync(roomCode!, "conn-1", "apple");
+
+        mockSingleClientProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args[0].ToString()!.Contains("No word set")),
+            default), Times.Once);
+    }
+    
+    
+    
     [Fact]
     public async Task RoomManager_CreateRoomAsync_ShouldReturnValidRoomCode()
     {
@@ -257,47 +741,15 @@ public class UnitTestGameLogic
             manager.AddPlayerAsync("INVALID", player));
     }
     
-
-
+    //RoomHub tests
     
     
-    [Fact]
-    public async Task RoomManager_CheckWordAsync_ShouldMarkCorrectGuess()
-    {
-        var hubContext = new Mock<IHubContext<RoomHub>>();
-        var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
-
-        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
-
-        var roomCode = await manager.CreateRoomAsync("Room3");
-
-        var commander = new Player("Cmd", "CMD") { Role = PlayerRole.Commander };
-        await manager.AddPlayerAsync(roomCode!, commander);
-
-        var p = new Player("P", "P1");
-        await manager.AddPlayerAsync(roomCode!, p);
-
-        manager.GetType()
-            .GetField("_emojisSent", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .SetValue(manager, new ConcurrentDictionary<string, bool> { [roomCode!] = true });
-
-        manager.GetType()
-            .GetField("_currentWords", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .SetValue(manager, new ConcurrentDictionary<string, string> { [roomCode!] = "apple" });
-
-        await manager.CheckWordAsync(roomCode!, "P1", "apple");
-
-        Assert.True(p.GuessedRight);
-    }
-
-
-
+    
     
 
     //WordService tests
     [Fact]
-    public async Task Test7_LoadWordsAsync_LoadsWordsCorrectly()
+    public async Task WordService_LoadWordsAsync_LoadsWordsCorrectly()
     {
         var service = new WordService();
         var stream = new MemoryStream(Encoding.UTF8.GetBytes("apple\nbanana\napple"));
@@ -307,14 +759,14 @@ public class UnitTestGameLogic
     }
 
     [Fact]
-    public async Task Test8_GetRandomWordAsync_Throws_WhenEmpty()
+    public async Task WordService_GetRandomWordAsync_Throws_WhenEmpty()
     {
         var service = new WordService();
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetRandomWordAsync());
     }
 
     [Fact]
-    public async Task Test9_GetRandomWordAsync_ReturnsWord_WhenLoaded()
+    public async Task WordService_GetRandomWordAsync_ReturnsWord_WhenLoaded()
     {
         var service = new WordService();
         var stream = new MemoryStream(Encoding.UTF8.GetBytes("apple\nbanana"));
