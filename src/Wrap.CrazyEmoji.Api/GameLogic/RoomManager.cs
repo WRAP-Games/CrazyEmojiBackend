@@ -29,7 +29,7 @@ public class RoomManager
         _logger = logger;
     }
 
-    public Task<string?> CreateRoomAsync(string roomName)
+    public virtual Task<string?> CreateRoomAsync(string roomName)
     {
         var roomCode = GenerateUniqueRoomCode();
         return _rooms.TryAdd(roomCode, [])
@@ -58,7 +58,7 @@ public class RoomManager
         return roomCode;
     }
 
-    public async Task<bool> AddPlayerAsync(string roomCode, Player player)
+    public virtual async Task<bool> AddPlayerAsync(string roomCode, Player player)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
             throw new RoomNotFoundException(roomCode);
@@ -70,7 +70,7 @@ public class RoomManager
         return true;
     }
 
-    public async Task RemovePlayerAsync(string connectionId)
+    public virtual async Task RemovePlayerAsync(string connectionId)
     {
         foreach (var room in _rooms)
         {
@@ -211,7 +211,7 @@ public class RoomManager
             .SendAsync(RoomHubConstants.ReceiveWord, word);
     }
 
-    public async Task SendEmojisAsync(string roomCode, string connectionId, string emojis)
+    public virtual async Task SendEmojisAsync(string roomCode, string connectionId, string emojis)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
             throw new RoomNotFoundException(roomCode);
@@ -229,7 +229,7 @@ public class RoomManager
             .SendAsync(RoomHubConstants.ReceiveEmojis, emojis);
     }
 
-    public async Task CheckWordAsync(string roomCode, string connectionId, string word)
+    public virtual async Task CheckWordAsync(string roomCode, string connectionId, string word)
     {
         if (!_rooms.TryGetValue(roomCode, out var players))
             throw new RoomNotFoundException(roomCode);
