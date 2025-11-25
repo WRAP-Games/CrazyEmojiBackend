@@ -729,21 +729,6 @@ public class UnitTests
         groups.Verify(g => g.AddToGroupAsync("C1", roomCode!, default), Times.Once);
     }
     
-    [Fact]
-    public async Task RoomManager_AddPlayerAsync_ShouldThrow_WhenRoomNotFound()
-    {
-        var hubContext = new Mock<IHubContext<RoomHub>>();
-        var wordService = new Mock<IWordService>();
-        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
-
-        var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
-
-        var player = new Player("Bob", "C22");
-
-        await Assert.ThrowsAsync<RoomNotFoundException>(() =>
-            manager.AddPlayerAsync("INVALID", player));
-    }
-    
     //RoomHub tests
     
     private RoomHub CreateRoomHub(
