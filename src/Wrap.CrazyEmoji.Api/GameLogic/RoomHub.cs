@@ -44,7 +44,7 @@ public class RoomHub : Hub
                        && usernameObj is string usernameStr
             ? usernameStr
             : Context.ConnectionId;
-        var player = new Player
+        var player = new Player{
             ConnectionId = Context.ConnectionId,
             Username = username,
             Role = PlayerRole.Player
