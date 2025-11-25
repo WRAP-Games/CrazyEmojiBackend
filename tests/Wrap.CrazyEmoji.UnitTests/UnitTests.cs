@@ -234,7 +234,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
         var roomCode = await manager.CreateRoomAsync("TestRoom");
@@ -249,7 +249,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
         var code1 = await manager.CreateRoomAsync("Room1");
@@ -266,7 +266,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out var mockGroups, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
         var player = new Player("Alice", "conn-alice");
@@ -281,7 +281,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var player = new Player("Bob", "conn-bob");
 
@@ -296,7 +296,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out var mockGroups, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
         var player1 = new Player("Alice", "conn-1");
@@ -318,7 +318,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
         var player = new Player("Alice", "conn-alice");
@@ -337,7 +337,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         await manager.CreateRoomAsync("Room1");
 
@@ -354,7 +354,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out var mockClientProxy);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode1 = await manager.CreateRoomAsync("Room1");
         var roomCode2 = await manager.CreateRoomAsync("Room2");
@@ -378,7 +378,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -399,7 +399,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
         await Assert.ThrowsAsync<NotEnoughPlayersException>(() =>
@@ -412,7 +412,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
         await Assert.ThrowsAsync<RoomNotFoundException>(() =>
@@ -424,7 +424,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -445,7 +445,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -465,7 +465,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         
         await Assert.ThrowsAsync<RoomNotFoundException>(() =>
@@ -477,7 +477,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -497,7 +497,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -525,7 +525,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -553,7 +553,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out _, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -580,7 +580,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -610,7 +610,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -640,7 +640,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -670,7 +670,7 @@ public class UnitTests
     {
         var hubContext = CreateMockHubContext(out _, out _, out var mockSingleClientProxy, out _);
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
         var roomCode = await manager.CreateRoomAsync("Room1");
 
@@ -698,7 +698,7 @@ public class UnitTests
     {
         var hubContext = new Mock<IHubContext<RoomHub>>();
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
 
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
@@ -716,7 +716,7 @@ public class UnitTests
         hubContext.Setup(x => x.Groups).Returns(groups.Object);
 
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
 
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
@@ -734,7 +734,7 @@ public class UnitTests
     {
         var hubContext = new Mock<IHubContext<RoomHub>>();
         var wordService = new Mock<IWordService>();
-        var logger = new LoggerFactory().CreateLogger<RoomManager>();
+        var logger = Microsoft.Extensions.Logging.Abstractions.NullLogger<RoomManager>.Instance;
 
         var manager = new RoomManager(hubContext.Object, wordService.Object, logger);
 
@@ -1408,7 +1408,8 @@ public class UnitTests
         await handler.TryHandleAsync(httpContext, exception, CancellationToken.None);
 
         httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
-        var responseText = await new StreamReader(httpContext.Response.Body).ReadToEndAsync();
+        using var reader = new StreamReader(httpContext.Response.Body);
+        var responseText = await reader.ReadToEndAsync();
     
         Assert.Contains("\"status\":500", responseText);
         Assert.Contains("An unexpected error occurred", responseText);
