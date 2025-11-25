@@ -17,7 +17,6 @@ namespace Wrap.CrazyEmoji.UnitTests;
 
 public class UnitTests
 {
-
     //points tests
     [Theory]
     [InlineData(-1)]
@@ -26,7 +25,7 @@ public class UnitTests
     {
         Assert.Throws<ArgumentException>(() => new Points(invalidValue));
     }
-
+  
     [Fact]
     public void Constructor_ValidValue_ShouldSetValue()
     {
@@ -78,7 +77,6 @@ public class UnitTests
         Assert.Equal("15", result);
     }
 
-
     //player role tests
 
     [Fact]
@@ -104,7 +102,6 @@ public class UnitTests
         Assert.Equal(0, (int)commander);
         Assert.Equal(1, (int)playerRole);
     }
-
 
     //player tests
     [Fact]
@@ -132,7 +129,6 @@ public class UnitTests
         string connectionId = "conn-1";
         Assert.Throws<ArgumentException>(() => new Player(username!, connectionId));
     }
-
 
     [Theory]
     [InlineData("")]
@@ -208,7 +204,6 @@ public class UnitTests
     }
 
     // RoomManager tests
-
     private Mock<IHubContext<RoomHub>> CreateMockHubContext(
         out Mock<IGroupManager> mockGroups,
         out Mock<IHubClients> mockClients,
@@ -438,7 +433,6 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("commander")),
             default), Times.Once);
     }
-
 
     [Fact]
     public async Task RoomManager_SendEmojisAsync_WithNonExistentPlayer_ShouldSendError()
@@ -690,7 +684,6 @@ public class UnitTests
             It.Is<object[]>(args => args[0].ToString()!.Contains("No word set")),
             default), Times.Once);
     }
-
 
     //RoomHub tests
 
@@ -1326,8 +1319,4 @@ public class UnitTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-
-
-
 }

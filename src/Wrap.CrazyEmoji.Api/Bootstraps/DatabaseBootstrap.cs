@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Data;
 
 namespace Wrap.CrazyEmoji.Api.Bootstraps;

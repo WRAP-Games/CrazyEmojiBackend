@@ -17,6 +17,7 @@ try
     builder.Services
         .RegisterDatabase(builder.Configuration)
         .RegisterAuth(builder.Configuration)
+        // .RegisterDatabase(builder.Configuration)  // Database disabled
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()
         .AddOpenApi()
