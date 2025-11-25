@@ -743,6 +743,414 @@ public class UnitTestGameLogic
     
     //RoomHub tests
     
+    private RoomHub CreateRoomHub(
+        out Mock<RoomManager> mockRoomManager,
+        out Mock<HubCallerContext> mockContext,
+        out Mock<IHubCallerClients> mockClients,
+        out Mock<ISingleClientProxy> mockCallerProxy,
+        out Mock<IClientProxy> mockGroupProxy,
+        out Mock<IGroupManager> mockGroups,
+        out Dictionary<object, object?> contextItems)
+    {
+        mockRoomManager = new Mock<RoomManager>(
+            Mock.Of<IHubContext<RoomHub>>(),
+            Mock.Of<IWordService>(),
+            Mock.Of<ILogger<RoomManager>>());
+
+        mockContext = new Mock<HubCallerContext>();
+        mockClients = new Mock<IHubCallerClients>();
+        mockCallerProxy = new Mock<ISingleClientProxy>();
+        mockGroupProxy = new Mock<IClientProxy>();
+        mockGroups = new Mock<IGroupManager>();
+        contextItems = new Dictionary<object, object?>();
+
+        mockContext.Setup(c => c.ConnectionId).Returns("test-connection-id");
+        mockContext.Setup(c => c.Items).Returns(contextItems);
+
+        mockClients.Setup(c => c.Caller).Returns(mockCallerProxy.Object);
+        mockClients.Setup(c => c.Group(It.IsAny<string>())).Returns(mockGroupProxy.Object);
+
+        var hub = new RoomHub(mockRoomManager.Object)
+        {
+            Context = mockContext.Object,
+            Clients = mockClients.Object,
+            Groups = mockGroups.Object
+        };
+
+        return hub;
+    }
+    
+    [Fact]
+    public async Task RoomHub_SetUsername_WithValidUsername_ShouldSetInContextAndNotifyCaller()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out var mockCallerProxy, out _, out _, out var contextItems);
+        var username = "TestUser";
+
+        await hub.SetUsername(username);
+
+        Assert.Equal(username, contextItems[RoomHubConstants.Username]);
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.UsernameSet,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == username),
+            default), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomHub_CreateRoom_WithNullRoomName_ShouldThrowArgumentNullException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out _);
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => hub.CreateRoom(null!));
+    }
+
+    [Fact]
+    public async Task RoomHub_CreateRoom_WithEmptyRoomName_ShouldThrowArgumentException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out _);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => hub.CreateRoom(""));
+    }
+
+    [Fact]
+    public async Task RoomHub_CreateRoom_WithWhitespaceRoomName_ShouldThrowArgumentException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out _);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => hub.CreateRoom("   "));
+    }
+    
+    [Fact]
+    public async Task RoomHub_SetUsername_CalledMultipleTimes_ShouldUpdateUsername()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out var mockCallerProxy, out _, out _, out var contextItems);
+
+        await hub.SetUsername("FirstName");
+        await hub.SetUsername("SecondName");
+
+        Assert.Equal("SecondName", contextItems[RoomHubConstants.Username]);
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.UsernameSet,
+            It.IsAny<object[]>(),
+            default), Times.Exactly(2));
+    }
+    
+    [Fact]
+    public async Task RoomHub_CreateRoom_WithValidRoomName_ShouldCreateRoomAndJoin()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+            out _, out var mockGroups, out var contextItems);
+        var roomName = "TestRoom";
+        var roomCode = "ABC123";
+
+        mockRoomManager.Setup(m => m.CreateRoomAsync(roomName))
+            .ReturnsAsync(roomCode);
+        mockRoomManager.Setup(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()))
+            .ReturnsAsync(true);
+
+        await hub.CreateRoom(roomName);
+
+        mockRoomManager.Verify(m => m.CreateRoomAsync(roomName), Times.Once);
+        mockGroups.Verify(g => g.AddToGroupAsync("test-connection-id", roomCode, default), Times.Once);
+        Assert.Equal(roomCode, contextItems[RoomHubConstants.RoomCode]);
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.CreatedRoom,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == roomCode),
+            default), Times.Once);
+        mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomHub_CreateRoom_WhenCreationFails_ShouldSendError()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+            out _, out _, out _);
+        var roomName = "TestRoom";
+
+        mockRoomManager.Setup(m => m.CreateRoomAsync(roomName))
+            .ReturnsAsync((string?)null);
+
+        await hub.CreateRoom(roomName);
+
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString()!.Contains("Failed to create room")),
+            default), Times.Once);
+    }
+    
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WithValidRoomCode_ShouldJoinRoom()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+            out _, out _, out var contextItems);
+        var roomCode = "ABC123";
+        var username = "TestUser";
+        contextItems[RoomHubConstants.Username] = username;
+
+        mockRoomManager.Setup(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()))
+            .ReturnsAsync(true);
+
+        await hub.JoinRoom(roomCode);
+
+        mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode, 
+            It.Is<Player>(p => p.ConnectionId == "test-connection-id" 
+                               && p.Username == username 
+                               && p.Role == PlayerRole.Player)), Times.Once);
+        Assert.Equal(roomCode, contextItems[RoomHubConstants.RoomCode]);
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.JoinedRoom,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == roomCode),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomHub_JoinRoom_WithoutUsername_ShouldUseConnectionIdAsUsername()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+        var roomCode = "ABC123";
+
+        mockRoomManager.Setup(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()))
+            .ReturnsAsync(true);
+
+        await hub.JoinRoom(roomCode);
+
+        mockRoomManager.Verify(m => m.AddPlayerAsync(roomCode,
+            It.Is<Player>(p => p.Username == "test-connection-id")), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WhenRoomNotFound_ShouldSendError()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+            out _, out _, out var contextItems);
+        var roomCode = "INVALID";
+
+        mockRoomManager.Setup(m => m.AddPlayerAsync(roomCode, It.IsAny<Player>()))
+            .ReturnsAsync(false);
+
+        await hub.JoinRoom(roomCode);
+
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString()!.Contains("Room not found")),
+            default), Times.Once);
+        Assert.False(contextItems.ContainsKey(RoomHubConstants.RoomCode));
+    }
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WithNullRoomCode_ShouldThrowArgumentNullException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out var contextItems);
+        contextItems[RoomHubConstants.Username] = "TestUser"; 
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() => hub.JoinRoom(null!));
+    }
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WithEmptyRoomCode_ShouldThrowArgumentException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out var contextItems);
+        contextItems[RoomHubConstants.Username] = "TestUser";
+
+        await Assert.ThrowsAsync<ArgumentException>(() => hub.JoinRoom(""));
+    }
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WithWhitespaceRoomCode_ShouldThrowArgumentException()
+    {
+        var hub = CreateRoomHub(out _, out _, out _, out _, out _, out _, out var contextItems);
+        contextItems[RoomHubConstants.Username] = "TestUser"; 
+
+        await Assert.ThrowsAsync<ArgumentException>(() => hub.JoinRoom("   "));
+    }
+
+    [Fact]
+    public async Task RoomHub_JoinRoom_WhenAlreadyInRoom_ShouldUpdateRoomCode()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out _, out _, out var contextItems);
+        var firstRoomCode = "ROOM01";
+        var secondRoomCode = "ROOM02";
+    
+        contextItems[RoomHubConstants.RoomCode] = firstRoomCode;
+
+        mockRoomManager.Setup(m => m.AddPlayerAsync(It.IsAny<string>(), It.IsAny<Player>()))
+            .ReturnsAsync(true);
+
+        await hub.JoinRoom(secondRoomCode);
+
+        Assert.Equal(secondRoomCode, contextItems[RoomHubConstants.RoomCode]);
+    }
+    
+    [Fact]
+    public async Task RoomHub_StartGame_WhenInRoom_ShouldStartGameAndNotifyGroup()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out var mockGroupProxy, out _, out var contextItems);
+        var roomCode = "ABC123";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        mockRoomManager.Setup(m => m.StartGameAsync(roomCode))
+            .ReturnsAsync(true);
+
+        await hub.StartGame();
+
+        mockRoomManager.Verify(m => m.StartGameAsync(roomCode), Times.Once);
+        mockGroupProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.GameStarted,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString() == roomCode),
+            default), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomHub_StartGame_WhenNotInRoom_ShouldSendError()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out var mockCallerProxy, 
+            out _, out _, out _);
+
+        await hub.StartGame();
+
+        mockCallerProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.Error,
+            It.Is<object[]>(args => args.Length == 1 && args[0].ToString()!.Contains("not in a room")),
+            default), Times.Once);
+        mockRoomManager.Verify(m => m.StartGameAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RoomHub_StartGame_WhenStartFails_ShouldNotNotifyGroup()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out var mockGroupProxy, out _, out var contextItems);
+        var roomCode = "ABC123";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        mockRoomManager.Setup(m => m.StartGameAsync(roomCode))
+            .ReturnsAsync(false);
+
+        await hub.StartGame();
+
+        mockGroupProxy.Verify(c => c.SendCoreAsync(
+            RoomHubConstants.GameStarted,
+            It.IsAny<object[]>(),
+            default), Times.Never);
+    }
+    
+    [Fact]
+    public async Task RoomHub_GetAndSendEmojis_WhenInRoom_ShouldSendEmojisToRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out _, out _, out var contextItems);
+        var roomCode = "ABC123";
+        var emojis = "😀😃😄";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        await hub.GetAndSendEmojis(emojis);
+
+        mockRoomManager.Verify(m => m.SendEmojisAsync(roomCode, "test-connection-id", emojis), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomHub_GetAndSendEmojis_WhenNotInRoom_ShouldNotCallRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+        var emojis = "😀😃😄";
+
+        await hub.GetAndSendEmojis(emojis);
+
+        mockRoomManager.Verify(m => m.SendEmojisAsync(
+            It.IsAny<string>(), 
+            It.IsAny<string>(), 
+            It.IsAny<string>()), Times.Never);
+    }
+    
+    [Fact]
+    public async Task RoomHub_GetAndSendEmojis_WithEmptyEmojis_ShouldStillCallRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out _, out _, out var contextItems);
+        var roomCode = "ABC123";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        await hub.GetAndSendEmojis("");
+
+        mockRoomManager.Verify(m => m.SendEmojisAsync(roomCode, "test-connection-id", ""), Times.Once);
+    }
+
+
+    [Fact]
+    public async Task RoomHub_CheckWord_WhenInRoom_ShouldCheckWordWithRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out _, out _, out var contextItems);
+        var roomCode = "ABC123";
+        var word = "apple";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        await hub.CheckWord(word);
+
+        mockRoomManager.Verify(m => m.CheckWordAsync(roomCode, "test-connection-id", word), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomHub_CheckWord_WhenNotInRoom_ShouldNotCallRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+        var word = "apple";
+
+        await hub.CheckWord(word);
+
+        mockRoomManager.Verify(m => m.CheckWordAsync(
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task RoomHub_CheckWord_WithEmptyWord_ShouldStillCallRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, 
+            out _, out _, out var contextItems);
+        var roomCode = "ABC123";
+        contextItems[RoomHubConstants.RoomCode] = roomCode;
+
+        await hub.CheckWord("");
+
+        mockRoomManager.Verify(m => m.CheckWordAsync(roomCode, "test-connection-id", ""), Times.Once);
+    }
+    
+    [Fact]
+    public async Task RoomHub_OnDisconnectedAsync_ShouldRemovePlayerFromRoomManager()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+
+        await hub.OnDisconnectedAsync(null);
+
+        mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomHub_OnDisconnectedAsync_WithException_ShouldStillRemovePlayer()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+        var exception = new Exception("Test exception");
+
+        await hub.OnDisconnectedAsync(exception);
+
+        mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
+    }
+
+    [Fact]
+    public async Task RoomHub_OnDisconnectedAsync_ShouldCallBaseMethod()
+    {
+        var hub = CreateRoomHub(out var mockRoomManager, out _, out _, out _, out _, out _, out _);
+    
+        var exception = await Record.ExceptionAsync(() => hub.OnDisconnectedAsync(null));
+    
+        Assert.Null(exception);
+        mockRoomManager.Verify(m => m.RemovePlayerAsync("test-connection-id"), Times.Once);
+    }
+    
     
     
     
