@@ -692,9 +692,6 @@ public class UnitTests
     }
     
     
-    
-    [Fact]
-    
     //RoomHub tests
     
     private RoomHub CreateRoomHub(
