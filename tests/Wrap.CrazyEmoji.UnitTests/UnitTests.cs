@@ -12,7 +12,7 @@ using Wrap.CrazyEmoji.Api.Services;
 
 namespace Wrap.CrazyEmoji.UnitTests;
 
-public class UnitTestGameLogic
+public class UnitTests
 {
     
     //points tests
