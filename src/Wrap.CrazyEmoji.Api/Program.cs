@@ -15,6 +15,7 @@ try
 
     // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
     builder.Services
+        .RegisterDatabase(builder.Configuration)
         .RegisterAuth(builder.Configuration)
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()

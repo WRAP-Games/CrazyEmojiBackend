@@ -11,7 +11,6 @@ public static class WordBootstrap
         using var stream = File.OpenRead("Content/words.txt");
         await wordService.LoadWordsAsync(stream);
 
-        return services
-            .AddSingleton<IWordService>(wordService);
+        return services.AddSingleton<IWordService>(wordService);
     }
 }

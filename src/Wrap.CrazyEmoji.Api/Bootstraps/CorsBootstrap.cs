@@ -11,7 +11,8 @@ internal static class CorsBootstrap
                 builder
                     .SetIsOriginAllowed(_ => true)
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
     }
