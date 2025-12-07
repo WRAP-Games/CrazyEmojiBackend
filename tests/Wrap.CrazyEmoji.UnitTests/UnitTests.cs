@@ -11,6 +11,7 @@ using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 using Wrap.CrazyEmoji.Api.Infrastructure;
 using Wrap.CrazyEmoji.Api.Services;
+using Xunit;
 
 
 namespace Wrap.CrazyEmoji.UnitTests;
@@ -1495,8 +1496,4 @@ public class UnitTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
     }
-
-
-
-
 }
