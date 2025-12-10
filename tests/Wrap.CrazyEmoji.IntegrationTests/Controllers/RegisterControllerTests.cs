@@ -7,7 +7,7 @@ namespace Wrap.CrazyEmoji.IntegrationTests.Controllers;
 public class RegisterControllerTests(ApiFixture apiFixture)
 {
     [Fact]
-    public async Task Register_NewUser_ShouldReturn201Created()
+    public async Task Register_NewUser_ShouldReturn200OK()
     {
         // Arrange
         var client = await apiFixture.GetUnauthorizedUser1ClientAsync();
