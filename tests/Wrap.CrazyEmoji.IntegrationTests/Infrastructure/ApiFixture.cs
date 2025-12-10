@@ -14,7 +14,7 @@ public sealed class ApiFixture : IAsyncLifetime
 
     private const string RegisterPath = "api/auth/register";
     private const string LoginPath = "api/auth/login";
-    private const string RefreshPath = "api/auth/login";
+    private const string RefreshPath = "api/auth/refresh";
 
     public async ValueTask InitializeAsync()
     {
