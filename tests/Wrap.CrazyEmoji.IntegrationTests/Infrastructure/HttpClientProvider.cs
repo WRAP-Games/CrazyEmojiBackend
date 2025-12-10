@@ -49,7 +49,7 @@ internal class HttpClientProvider(ApiApplicationFactory factory, string register
                     _refreshPath,
                     existingToken.RefreshToken);
 
-                _sessions.TryAdd(email, refreshedToken);
+                _sessions[email] = refreshedToken;
 
                 return refreshedToken;
             }
