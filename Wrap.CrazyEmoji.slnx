@@ -1,11 +1,12 @@
 <Solution>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="coverage.config" />
     <File Path="README.md" />
   </Folder>
   <Folder Name="/Tests/">
-    <Project Path="tests/Wrap.CrazyEmoji.UnitTests/Wrap.CrazyEmoji.UnitTests.csproj" Id="31762429-2e15-40ac-9e35-f329b586a48c" />
     <Project Path="tests/Wrap.CrazyEmoji.IntegrationTests/Wrap.CrazyEmoji.IntegrationTests.csproj" Id="dc24e580-896c-494f-bda1-37473b6868ae" />
+    <Project Path="tests/Wrap.CrazyEmoji.UnitTests/Wrap.CrazyEmoji.UnitTests.csproj" Id="31762429-2e15-40ac-9e35-f329b586a48c" />
   </Folder>
   <Project Path="src/Wrap.CrazyEmoji.Api/Wrap.CrazyEmoji.Api.csproj" />
   <Project Path="src/Wrap.CrazyEmoji.Console/Wrap.CrazyEmoji.Console.csproj" />

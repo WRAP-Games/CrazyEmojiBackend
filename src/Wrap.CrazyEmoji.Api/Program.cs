@@ -6,6 +6,7 @@ using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Infrastructure;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
+[assembly: InternalsVisibleTo("Wrap.CrazyEmoji.IntegrationTests")]
 
 try
 {
@@ -17,7 +18,6 @@ try
     builder.Services
         .RegisterDatabase(builder.Configuration)
         .RegisterAuth(builder.Configuration)
-        // .RegisterDatabase(builder.Configuration)  // Database disabled
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()
         .AddOpenApi()
@@ -27,7 +27,7 @@ try
         .RegisterSignalR()
         .AddControllers();
 
-    await builder.Services.AddWordService();
+    await builder.Services.AddWordService(builder.Configuration);
 
     var app = builder.Build();
 
@@ -55,5 +55,3 @@ finally
 {
     Log.CloseAndFlush();
 }
-
-public partial class Program { }

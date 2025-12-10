@@ -21,7 +21,7 @@ internal static class WebApplicationExtensions
         app.UseCors("ClientCors");
         app.UseAuthentication();
         app.UseAuthorization();
-        app.MapIdentityApi<IdentityUser>();
+        app.MapGroup("api/auth").MapIdentityApi<IdentityUser>();
         app.MapHub<RoomHub>("/roomHub").RequireAuthorization();
         app.MapControllers();
 
