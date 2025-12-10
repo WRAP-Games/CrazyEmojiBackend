@@ -6,6 +6,7 @@ using Wrap.CrazyEmoji.Api.GameLogic;
 using Wrap.CrazyEmoji.Api.Infrastructure;
 
 [assembly: InternalsVisibleTo("Wrap.CrazyEmoji.UnitTests")]
+[assembly: InternalsVisibleTo("Wrap.CrazyEmoji.IntegrationTests")]
 
 try
 {
@@ -26,7 +27,7 @@ try
         .RegisterSignalR()
         .AddControllers();
 
-    await builder.Services.AddWordService();
+    await builder.Services.AddWordService(builder.Configuration);
 
     var app = builder.Build();
 
