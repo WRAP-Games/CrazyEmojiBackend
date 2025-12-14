@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.SignalR;
 using Wrap.CrazyEmoji.Api.Constants;
+using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
@@ -7,90 +8,110 @@ public class RoomHub(RoomManager roomManager) : Hub
 {
     private readonly RoomManager _roomManager = roomManager;
 
-    public async Task SetUsername(string username)
+    private async Task CreateUser(string username, string password)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(username);
-        Context.Items[RoomHubConstants.Username] = username;
-        await Clients.Caller.SendAsync(RoomHubConstants.UsernameSet, username);
-    }
-
-    public async Task CreateRoom(string roomName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roomName);
-
-        var roomCode = await _roomManager.CreateRoomAsync(roomName);
-        if (roomCode == null)
+        try
         {
-            await Clients.Caller.SendAsync(RoomHubConstants.Error, "Failed to create room");
-            return;
+            await _roomManager.CreateUser(Context.ConnectionId, username, password);
+            await Clients.Caller.SendAsync(RoomHubConstants.createdUser, username);
+        }
+        catch (InvalidUsernameException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createUser} {RoomHubErrors.incorrectUsername}");
+        }
+        catch (InvalidPasswordException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createUser} {RoomHubErrors.incorrectPassword}");
+        }
+        catch (UsernameTakenException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createUser} {RoomHubErrors.usernameTaken}");
         }
 
-        await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
-        Context.Items[RoomHubConstants.RoomCode] = roomCode;
-
-        await Clients.Caller.SendAsync(RoomHubConstants.CreatedRoom, roomCode);
-        await JoinRoom(roomCode);
     }
 
-    public async Task JoinRoom(string roomCode)
+    private async Task LoginUser(string username, string password)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(roomCode);
-
-        var username = Context.Items.TryGetValue(RoomHubConstants.Username, out var usernameObj) 
-                       && usernameObj is string usernameStr
-            ? usernameStr
-            : Context.ConnectionId;
-        var player = new Player{
-            ConnectionId = Context.ConnectionId,
-            Username = username,
-            Role = PlayerRole.Player
-        };
-
-        var joined = await _roomManager.AddPlayerAsync(roomCode, player);
-        if (!joined)
+        try
         {
-            await Clients.Caller.SendAsync(RoomHubConstants.Error, "Room not found");
-            return;
+            await _roomManager.LoginUser(Context.ConnectionId, username, password);
+            await Clients.Caller.SendAsync(RoomHubConstants.userLoggedIn);
         }
-
-        Context.Items[RoomHubConstants.RoomCode] = roomCode;
-        await Clients.Caller.SendAsync(RoomHubConstants.JoinedRoom, roomCode);
-    }
-
-    public async Task StartGame()
-    {
-        if (!Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
-            || roomCodeObj is not string roomCode)
+        catch (InvalidUsernameException)
         {
-            await Clients.Caller.SendAsync(RoomHubConstants.Error, "You are not in a room.");
-            return;
-        }
-
-        var gameStarted = await _roomManager.StartGameAsync(roomCode);
-        if (gameStarted) await Clients.Group(roomCode).SendAsync(RoomHubConstants.GameStarted, roomCode);
-    }
-
-    public async Task GetAndSendEmojis(string emojis)
-    {
-        if (Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
-            && roomCodeObj is string roomCode)
-        {
-            await _roomManager.SendEmojisAsync(roomCode, Context.ConnectionId, emojis);
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.loginUser} {RoomHubErrors.incorrectUsernamePassword}");
         }
     }
 
-    public async Task CheckWord(string word)
+    private async Task GetCurrentUserData()
     {
-        if (Context.Items.TryGetValue(RoomHubConstants.RoomCode, out var roomCodeObj) 
-            && roomCodeObj is string roomCode)
+        try
         {
-            await _roomManager.CheckWordAsync(roomCode, Context.ConnectionId, word);
+            var (username, roomCode) = await _roomManager.GetCurrentUserDataAsync(Context.ConnectionId);
+            await Clients.Caller.SendAsync(RoomHubConstants.currentUserData, new { username, roomCode });
+        }
+        catch (InvalidConnectionIdException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.getCurrentUserData} {RoomHubErrors.incorrectConnectionId}");
         }
     }
 
-    public override async Task OnDisconnectedAsync(Exception? exception)
+    public async Task GetUserData(string username)
     {
-        await _roomManager.RemovePlayerAsync(Context.ConnectionId);
-        await base.OnDisconnectedAsync(exception);
+        try
+        {
+            await _roomManager.GetUserData(username, Context.ConnectionId);
+            await Clients.Caller.SendAsync(RoomHubConstants.userData, username);
+        }
+        catch (ForbiddenException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.getUserData} {RoomHubErrors.forbidden}");
+        }
     }
+
+    public async Task CreateRoom(string roomName, string category, int rounds, int roundDuration)
+    {
+        try
+        {
+            var roomCode = await _roomManager.CreateRoom(Context.ConnectionId, roomName, category, rounds, roundDuration);
+            await Clients.Caller.SendAsync(RoomHubConstants.createdRoom, roomCode);
+        }
+        catch (ForbiddenException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.forbidden}");
+        }
+        catch (JoinedDifferentRoomException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.joinedDifferentRoom}");
+        }
+        catch (IncorrectRoomNameException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoomName}");
+        }
+        catch (IncorrectRoomCategoryException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoomCategory}");
+        }
+        catch (IncorrectRoundAmountException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoundAmount}");
+        }
+        catch (IncorrectRoundDurationException)
+        {
+            await Clients.Caller.SendAsync(RoomHubConstants.Error,
+                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoundDuration}");
+        }
+    }
+
 }
