@@ -1,57 +1,77 @@
+﻿using System;
+using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Data.Entities;
 
 namespace Wrap.CrazyEmoji.Api.Data;
 
-public class GameDbContext : DbContext
+public partial class GameDbContext : DbContext
 {
-    public GameDbContext(DbContextOptions<GameDbContext> options) : base(options)
+    public GameDbContext()
     {
     }
 
-    public DbSet<GameEntity> Games { get; set; }
-    public DbSet<UserEntity> Users { get; set; }
-    public DbSet<GameRoundEntity> GameRounds { get; set; }
+    public GameDbContext(DbContextOptions<GameDbContext> options)
+        : base(options)
+    {
+    }
+
+    public virtual DbSet<ActiveRoom> ActiveRooms { get; set; }
+
+    public virtual DbSet<RoomMember> RoomMembers { get; set; }
+
+    public virtual DbSet<User> Users { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder);
+        modelBuilder
+            .HasPostgresEnum("auth", "aal_level", new[] { "aal1", "aal2", "aal3" })
+            .HasPostgresEnum("auth", "code_challenge_method", new[] { "s256", "plain" })
+            .HasPostgresEnum("auth", "factor_status", new[] { "unverified", "verified" })
+            .HasPostgresEnum("auth", "factor_type", new[] { "totp", "webauthn", "phone" })
+            .HasPostgresEnum("auth", "oauth_authorization_status", new[] { "pending", "approved", "denied", "expired" })
+            .HasPostgresEnum("auth", "oauth_client_type", new[] { "public", "confidential" })
+            .HasPostgresEnum("auth", "oauth_registration_type", new[] { "dynamic", "manual" })
+            .HasPostgresEnum("auth", "oauth_response_type", new[] { "code" })
+            .HasPostgresEnum("auth", "one_time_token_type", new[] { "confirmation_token", "reauthentication_token", "recovery_token", "email_change_token_new", "email_change_token_current", "phone_change_token" })
+            .HasPostgresEnum("realtime", "action", new[] { "INSERT", "UPDATE", "DELETE", "TRUNCATE", "ERROR" })
+            .HasPostgresEnum("realtime", "equality_op", new[] { "eq", "neq", "lt", "lte", "gt", "gte", "in" })
+            .HasPostgresEnum("storage", "buckettype", new[] { "STANDARD", "ANALYTICS", "VECTOR" })
+            .HasPostgresExtension("extensions", "pg_stat_statements")
+            .HasPostgresExtension("extensions", "pgcrypto")
+            .HasPostgresExtension("extensions", "uuid-ossp")
+            .HasPostgresExtension("graphql", "pg_graphql")
+            .HasPostgresExtension("vault", "supabase_vault");
 
-        modelBuilder.Entity<GameEntity>(entity =>
+        modelBuilder.Entity<ActiveRoom>(entity =>
         {
-            entity.HasKey(e => e.RoomCode);
+            entity.HasKey(e => e.RoomCode).HasName("ActiveRooms_pkey");
 
-            entity.HasOne(e => e.Host)
-                  .WithMany()
-                  .HasForeignKey(e => e.HostId)
-                  .OnDelete(DeleteBehavior.Restrict);
-
-            entity.HasMany(e => e.Users)
-                  .WithOne(u => u.Game)
-                  .HasForeignKey(u => u.RoomCode)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasMany(e => e.Rounds)
-                  .WithOne(r => r.Game)
-                  .HasForeignKey(r => r.RoomCode)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(d => d.RoomCreatorNavigation).WithMany(p => p.ActiveRooms).HasConstraintName("FkUserCreator");
         });
 
-        modelBuilder.Entity<UserEntity>(entity =>
+        modelBuilder.Entity<RoomMember>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            entity.HasIndex(e => e.Username).IsUnique();
+            entity.HasKey(e => new { e.RoomCode, e.Username }).HasName("RoomMembers_pkey");
 
-            entity.HasMany(e => e.CommandedRounds)
-                  .WithOne(r => r.Commander)
-                  .HasForeignKey(r => r.CommanderId)
-                  .OnDelete(DeleteBehavior.Cascade);
+            entity.Property(e => e.Role).HasDefaultValueSql("'Player'::character varying");
+
+            entity.HasOne(d => d.RoomCodeNavigation).WithMany(p => p.RoomMembers).HasConstraintName("FkRoomMember");
+
+            entity.HasOne(d => d.UsernameNavigation).WithMany(p => p.RoomMembers).HasConstraintName("FkUserMember");
         });
 
-        modelBuilder.Entity<GameRoundEntity>(entity =>
+        modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id);
-            // entity.Property(e => e.Id).UseSerialColumn(); // Removed deprecated method. Default conventions suffice.
+            entity.HasKey(e => e.Username).HasName("User_pkey");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .UseIdentityAlwaysColumn();
         });
+
+        OnModelCreatingPartial(modelBuilder);
     }
+
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
