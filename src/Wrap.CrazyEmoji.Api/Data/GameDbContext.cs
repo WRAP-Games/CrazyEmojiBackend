@@ -22,6 +22,10 @@ public partial class GameDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
+    public virtual DbSet<Category> Categories { get; set; }
+
+    public virtual DbSet<Word> Words { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -68,6 +72,29 @@ public partial class GameDbContext : DbContext
             entity.Property(e => e.Id)
                 .ValueGeneratedOnAdd()
                 .UseIdentityAlwaysColumn();
+        });
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Name).IsUnique();
+        });
+
+        modelBuilder.Entity<Word>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.HasOne(w => w.Category)
+                .WithMany(c => c.Words)
+                .HasForeignKey(w => w.CategoryId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ActiveRoom>(entity =>
+        {
+            entity.HasOne(a => a.CategoryNavigation)
+                .WithMany(c => c.ActiveRooms)
+                .HasForeignKey(a => a.CategoryId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         OnModelCreatingPartial(modelBuilder);
