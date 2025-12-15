@@ -14,13 +14,9 @@ public class RoomManager
     private readonly IServiceScopeFactory _scopeFactory;
 
     private readonly ILogger<RoomManager> _logger;
-
-    private readonly ConcurrentDictionary<string, List<Player>> _rooms = new();
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
     private readonly ConcurrentDictionary<string, int> _roomRounds = new();
-
-    private readonly GameCache<Player> _playerCache = new();
 
     private readonly IDbContextFactory<GameDbContext> _dbFactory;
     private static readonly Random RandomGenerator = Random.Shared;
@@ -186,7 +182,11 @@ public class RoomManager
             throw new IncorrectRoundDurationException();
         }
 
-        var roomCode = GenerateUniqueRoomCode();
+        var rooms = await _db.ActiveRooms
+            .Select(ar => ar.RoomCode)
+            .ToListAsync();
+
+        var roomCode = GenerateUniqueRoomCode(rooms);
 
         using var _dbWordService = _scopeFactory.CreateScope();
         var wordService = _dbWordService.ServiceProvider.GetRequiredService<IDbWordService>();
@@ -210,7 +210,7 @@ public class RoomManager
         return roomCode;
     }
 
-    private string GenerateUniqueRoomCode()
+    private string GenerateUniqueRoomCode(List<string> existingRoomCodes)
     {
         const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         string roomCode;
@@ -223,7 +223,7 @@ public class RoomManager
                 .Select(s => s[RandomGenerator.Next(s.Length)]).ToArray());
             attempts++;
         }
-        while (_rooms.ContainsKey(roomCode) && attempts < maxAttempts);
+        while (existingRoomCodes.Contains(roomCode) && attempts < maxAttempts);
 
         if (attempts >= maxAttempts)
             throw new InvalidOperationException("Unable to generate unique room code after maximum attempts.");

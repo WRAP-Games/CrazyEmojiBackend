@@ -1,8 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Wrap.CrazyEmoji.Api.Data;
-using Wrap.CrazyEmoji.Api.Services;
+﻿using Wrap.CrazyEmoji.Api.Services;
 using Wrap.CrazyEmoji.Api.Abstractions;
-
 
 namespace Wrap.CrazyEmoji.Api.Bootstraps;
 
