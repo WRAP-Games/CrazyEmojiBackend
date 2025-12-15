@@ -22,6 +22,11 @@ public partial class RoomMember
 
     public long GameScore { get; set; }
 
+    [Required]
+    public bool GuessedRight { get; set; } = false;
+
+    public string? GuessedWord { get; set; } = "";
+
     [ForeignKey("RoomCode")]
     [InverseProperty("RoomMembers")]
     public virtual ActiveRoom RoomCodeNavigation { get; set; } = null!;

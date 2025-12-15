@@ -20,7 +20,22 @@ public partial class ActiveRoom
     [StringLength(32)]
     public string RoomCreator { get; set; } = null!;
 
-    public long? CategoryId { get; set; }  // nullable because of ON DELETE SET NULL
+    public long? CategoryId { get; set; }
+
+    [Required]
+    public bool GameStarted { get; set; } = false;
+
+    public string? RoundWord { get; set; }
+
+    [Required]
+    public bool EmojisSent { get; set; } = false;
+
+    public DateTime? EmojisSentTime { get; set; } = null;
+
+    [Required]
+    public bool RoundEnded { get; set; } = false;
+
+    public int CurrentRound { get; set; } = 0;
 
     [ForeignKey("RoomCreator")]
     [InverseProperty("ActiveRooms")]
