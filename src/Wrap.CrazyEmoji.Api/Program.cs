@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Serilog;
+using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Bootstraps;
 using Wrap.CrazyEmoji.Api.Extensions;
 using Wrap.CrazyEmoji.Api.GameLogic;
@@ -21,7 +22,7 @@ try
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()
         .AddOpenApi()
-        .AddSingleton<RoomManager>()
+        .AddSingleton<IRoomManager, RoomManager>()
         .RegisterMapster()
         .RegisterCors()
         .RegisterSignalR()

@@ -8,7 +8,7 @@ using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
-public class RoomManager
+public class RoomManager : IRoomManager
 {
     private readonly IHubContext<RoomHub> _hubContext;
     private readonly IServiceScopeFactory _scopeFactory;
@@ -307,7 +307,7 @@ public class RoomManager
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
             .CountAsync();
 
-        if (playerCount < 3 && activeRoom.GameStarted)
+        if (playerCount <= 3 && activeRoom.GameStarted)
         {
             isGameEnded = true;
         }
@@ -600,7 +600,6 @@ public class RoomManager
 
         var members = await _db.RoomMembers
             .Where(m => m.RoomCode == roomMember.RoomCode)
-            .Select(m => new { m.Username, m.GuessedRight, m.GuessedWord, m.GameScore })
             .ToListAsync();
 
         var results = members
@@ -610,11 +609,16 @@ public class RoomManager
 
         bool nextRound = activeRoom.CurrentRound < activeRoom.Rounds;
 
+        foreach (var member in members)
+        {
+            member.Role = "Player";
+            member.GuessedRight = false;
+            member.GuessedWord = "";
+        }
+
         activeRoom.RoundEnded = false;
-        roomMember.Role = "Player";
         activeRoom.RoundWord = null;
-        roomMember.GuessedRight = false;
-        roomMember.GuessedWord = "";
+    
         await _db.SaveChangesAsync();
 
         return (results, nextRound);
