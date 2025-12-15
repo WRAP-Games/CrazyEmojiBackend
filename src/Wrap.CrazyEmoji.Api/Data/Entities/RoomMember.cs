@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,6 +19,11 @@ public partial class RoomMember
     public string Role { get; set; } = null!;
 
     public long GameScore { get; set; }
+
+    [Required]
+    public bool GuessedRight { get; set; } = false;
+
+    public string? GuessedWord { get; set; } = "";
 
     [ForeignKey("RoomCode")]
     [InverseProperty("RoomMembers")]

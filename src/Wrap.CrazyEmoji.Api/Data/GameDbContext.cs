@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Data.Entities;
 
 namespace Wrap.CrazyEmoji.Api.Data;
@@ -49,20 +47,37 @@ public partial class GameDbContext : DbContext
 
         modelBuilder.Entity<ActiveRoom>(entity =>
         {
-            entity.HasKey(e => e.RoomCode).HasName("ActiveRooms_pkey");
+            entity.HasKey(e => e.RoomCode)
+                .HasName("ActiveRooms_pkey");
 
-            entity.HasOne(d => d.RoomCreatorNavigation).WithMany(p => p.ActiveRooms).HasConstraintName("FkUserCreator");
+            entity.HasOne(d => d.RoomCreatorNavigation)
+                .WithMany(p => p.ActiveRooms)
+                .HasConstraintName("FkUserCreator");
         });
 
         modelBuilder.Entity<RoomMember>(entity =>
         {
-            entity.HasKey(e => new { e.RoomCode, e.Username }).HasName("RoomMembers_pkey");
+            entity.HasKey(e => new { e.RoomCode, e.Username })
+                .HasName("RoomMembers_pkey");
 
-            entity.Property(e => e.Role).HasDefaultValueSql("'Player'::character varying");
+            entity.Property(e => e.Role)
+                .HasDefaultValueSql("'Player'::character varying");
 
-            entity.HasOne(d => d.RoomCodeNavigation).WithMany(p => p.RoomMembers).HasConstraintName("FkRoomMember");
+            entity.HasOne(d => d.RoomCodeNavigation)
+                .WithMany(p => p.RoomMembers)
+                .HasConstraintName("FkRoomMember");
 
-            entity.HasOne(d => d.UsernameNavigation).WithMany(p => p.RoomMembers).HasConstraintName("FkUserMember");
+            entity.HasOne(d => d.UsernameNavigation)
+                .WithMany(p => p.RoomMembers)
+                .HasConstraintName("FkUserMember");
+
+            entity.Property(e => e.GuessedRight)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.GuessedWord)
+                .HasColumnType("TEXT")
+                .IsRequired(false);
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -95,6 +110,29 @@ public partial class GameDbContext : DbContext
                 .WithMany(c => c.ActiveRooms)
                 .HasForeignKey(a => a.CategoryId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.Property(e => e.GameStarted)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.RoundWord)
+                .HasColumnType("TEXT")
+                .IsRequired(false);
+
+            entity.Property(e => e.EmojisSent)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.EmojisSentTime)
+                .HasColumnType("timestamp")
+                .IsRequired(false);
+
+            entity.Property(e => e.RoundEnded)
+                .HasDefaultValue(false)
+                .IsRequired();
+
+            entity.Property(e => e.CurrentRound)
+                .HasDefaultValue(0);
         });
 
         OnModelCreatingPartial(modelBuilder);
