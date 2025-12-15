@@ -20,8 +20,13 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             Type = "https://datatracker.ietf.org/doc/html/rfc9110#name-500-internal-server-error"
         };
 
-        await context.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
+        await context.Response.WriteAsJsonAsync(
+            problemDetails,
+            new System.Text.Json.JsonSerializerOptions(),
+            context.Response.ContentType,
+            cancellationToken
+        );
+        
         return true;
     }
 }

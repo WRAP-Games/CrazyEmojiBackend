@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.SignalR;
+using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Constants;
 using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
-public class RoomHub(RoomManager roomManager) : Hub
+public class RoomHub(IRoomManager roomManager) : Hub
 {
-    private readonly RoomManager _roomManager = roomManager;
+    private readonly IRoomManager _roomManager = roomManager;
 
     private async Task CreateUser(string username, string password)
     {
