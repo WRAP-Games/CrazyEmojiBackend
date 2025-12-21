@@ -28,7 +28,7 @@ try
         .RegisterSignalR()
         .AddControllers();
 
-    //builder.Services.AddDbWordService();
+    builder.Services.AddDbWordService();
 
     var app = builder.Build();
 

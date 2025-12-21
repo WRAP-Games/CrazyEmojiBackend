@@ -9,7 +9,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
 {
     private readonly IRoomManager _roomManager = roomManager;
 
-    private async Task CreateUser(string username, string password)
+    public async Task CreateUser(string username, string password)
     {
         try
         {
@@ -34,7 +34,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
 
     }
 
-    private async Task LoginUser(string username, string password)
+    public async Task LoginUser(string username, string password)
     {
         try
         {
@@ -48,7 +48,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
         }
     }
 
-    private async Task GetCurrentUserData()
+    public async Task GetCurrentUserData()
     {
         try
         {
@@ -121,6 +121,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var (username, roomName, category, rounds, roundDuration, roomCreator, players) = await _roomManager.JoinRoom(Context.ConnectionId, roomCode);
+            await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
             await Clients.Caller.SendAsync(RoomHubConstants.joinedRoom, new { roomName, category, rounds, roundDuration, roomCreator, players });
             await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.playerJoined, username);
         }
@@ -151,7 +152,8 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var (username, roomCode, isGameEnded) = await _roomManager.LeftRoom(Context.ConnectionId);
-            await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.playerLeft, username);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomCode);
+            await Clients.Group(roomCode).SendAsync(RoomHubConstants.playerLeft, username);
             if (isGameEnded)
             {
                 await Clients.Group(roomCode).SendAsync(RoomHubConstants.gameEnded);
@@ -244,7 +246,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
                 $"{RoomHubCommands.checkWord} {RoomHubErrors.forbidden}");
         }
     }
-    
+
     public async Task GetResults()
     {
         try

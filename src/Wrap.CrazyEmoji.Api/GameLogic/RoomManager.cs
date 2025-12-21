@@ -188,8 +188,8 @@ public class RoomManager : IRoomManager
 
         var roomCode = GenerateUniqueRoomCode(rooms);
 
-        using var _dbWordService = _scopeFactory.CreateScope();
-        var wordService = _dbWordService.ServiceProvider.GetRequiredService<IDbWordService>();
+        using var scope = _scopeFactory.CreateScope();
+        var wordService = scope.ServiceProvider.GetRequiredService<IDbWordService>();
 
         await wordService.LoadWordsForRoomAsync(roomCode, categorySet.Id, rounds);
 
