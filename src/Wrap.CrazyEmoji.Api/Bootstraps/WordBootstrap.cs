@@ -7,7 +7,7 @@ public static class WordBootstrap
 {
     public static IServiceCollection AddDbWordService(this IServiceCollection services)
     {
-        services.AddScoped<IDbWordService, DbWordService>();
+        services.AddSingleton<IDbWordService, DbWordService>();
 
         return services;
     }

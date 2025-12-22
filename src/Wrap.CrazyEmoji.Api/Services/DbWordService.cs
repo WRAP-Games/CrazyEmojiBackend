@@ -6,17 +6,20 @@ namespace Wrap.CrazyEmoji.Api.Services;
 
 public class DbWordService : IDbWordService
 {
-    private readonly GameDbContext _db;
     private readonly Dictionary<string, Queue<string>> _roomWords = new();
 
-    public DbWordService(GameDbContext db)
+    private readonly IDbContextFactory<GameDbContext> _dbFactory;
+
+    public DbWordService(IDbContextFactory<GameDbContext> dbFactory)
     {
-        _db = db;
+        _dbFactory = dbFactory;
     }
 
     public async Task LoadWordsForRoomAsync(string roomCode, long categoryId, int amount)
     {
-        var words = await _db.Words
+        await using var db = await _dbFactory.CreateDbContextAsync();
+
+        var words = await db.Words
             .Where(w => w.CategoryId == categoryId)
             .OrderBy(_ => Guid.NewGuid())
             .Take(amount)

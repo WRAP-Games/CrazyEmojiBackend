@@ -93,7 +93,7 @@ public static class RoomTest
         connection.On<bool>("wordChecked", isCorrect =>
             Console.WriteLine($"✓ Word check: {(isCorrect ? "CORRECT! ✓" : "Incorrect ✗")}"));
 
-        connection.On<List<(string username, bool guessedRight, string guessedWord, long gameScore)>>("roundEnded", results =>
+       connection.On<List<RoundResult>>("roundEnded", results =>
         {
             Console.WriteLine("\n═══════════════════════════════════════════");
             Console.WriteLine("           ROUND ENDED - RESULTS            ");

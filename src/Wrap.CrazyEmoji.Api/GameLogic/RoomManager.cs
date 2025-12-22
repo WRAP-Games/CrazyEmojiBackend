@@ -11,8 +11,7 @@ namespace Wrap.CrazyEmoji.Api.GameLogic;
 public class RoomManager : IRoomManager
 {
     private readonly IHubContext<RoomHub> _hubContext;
-    private readonly IServiceScopeFactory _scopeFactory;
-
+    private readonly IDbWordService _wordService;
     private readonly ILogger<RoomManager> _logger;
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
@@ -22,15 +21,15 @@ public class RoomManager : IRoomManager
     private static readonly Random RandomGenerator = Random.Shared;
 
     public RoomManager(
-    IHubContext<RoomHub> hubContext,
-    ILogger<RoomManager> logger,
-    IDbContextFactory<GameDbContext> dbFactory,
-    IServiceScopeFactory scopeFactory)
+        IHubContext<RoomHub> hubContext,
+        ILogger<RoomManager> logger,
+        IDbContextFactory<GameDbContext> dbFactory,
+        IDbWordService wordService)
     {
         _hubContext = hubContext;
         _logger = logger;
         _dbFactory = dbFactory;
-        _scopeFactory = scopeFactory;
+        _wordService = wordService;
     }
 
     public async Task CreateUser(string connectionId, string username, string password)
@@ -188,10 +187,7 @@ public class RoomManager : IRoomManager
 
         var roomCode = GenerateUniqueRoomCode(rooms);
 
-        using var scope = _scopeFactory.CreateScope();
-        var wordService = scope.ServiceProvider.GetRequiredService<IDbWordService>();
-
-        await wordService.LoadWordsForRoomAsync(roomCode, categorySet.Id, rounds);
+        await _wordService.LoadWordsForRoomAsync(roomCode, categorySet.Id, rounds);
 
         var activeRoom = new Data.Entities.ActiveRoom
         {
@@ -307,7 +303,7 @@ public class RoomManager : IRoomManager
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
             .CountAsync();
 
-        if (playerCount <= 3 && activeRoom.GameStarted)
+        if (playerCount < 3 && activeRoom.GameStarted)
         {
             isGameEnded = true;
         }
@@ -436,10 +432,7 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        using var _dbWordService = _scopeFactory.CreateScope();
-        var wordService = _dbWordService.ServiceProvider.GetRequiredService<IDbWordService>();
-
-        var word = wordService.GetWord(roomMember.RoomCode);
+        var word = _wordService.GetWord(roomMember.RoomCode);
 
         activeRoom.RoundWord = word;
         await _db.SaveChangesAsync();
@@ -475,8 +468,10 @@ public class RoomManager : IRoomManager
         }
 
         activeRoom.EmojisSent = true;
-        activeRoom.EmojisSentTime = DateTime.UtcNow;
+        activeRoom.EmojisSentTime = DateTime.Now;
         await _db.SaveChangesAsync();
+
+        StartRoundTimer(activeRoom.RoomCode);
 
         return roomMember.RoomCode;
     }
@@ -520,14 +515,15 @@ public class RoomManager : IRoomManager
 
         var isCorrect = string.Equals(activeRoom.RoundWord, word, StringComparison.OrdinalIgnoreCase);
 
-        var score = roomMember.GameScore;
+        roomMember.GuessedWord = word;
+        roomMember.GuessedRight = isCorrect;
+
         if (isCorrect)
         {
-            score += 100;
-            roomMember.GameScore = score;
-            roomMember.GuessedRight = true;
-            await _db.SaveChangesAsync();
+            roomMember.GameScore += 100;
         }
+
+        await _db.SaveChangesAsync();
 
         return (isCorrect, roomMember.RoomCode);
     }
@@ -545,7 +541,7 @@ public class RoomManager : IRoomManager
 
                 if (room.EmojisSentTime != null)
                 {
-                    var elapsed = DateTime.UtcNow - room.EmojisSentTime.Value;
+                    var elapsed = DateTime.Now - room.EmojisSentTime.Value;
                     if (elapsed.TotalSeconds >= room.RoundDuration)
                     {
                         await EndRoundAsync(roomCode);
@@ -571,7 +567,7 @@ public class RoomManager : IRoomManager
         await _db.SaveChangesAsync();
     }
 
-    public async Task<(List<(string username, bool guessedRight, string? guessedWord, long gameScore)>, bool nextRound)> GetResults(string connectionId)
+    public async Task<(List<RoundResult> results, bool nextRound)> GetResults(string connectionId)
     {
         await using var _db = await _dbFactory.CreateDbContextAsync();
 
@@ -602,23 +598,28 @@ public class RoomManager : IRoomManager
             .Where(m => m.RoomCode == roomMember.RoomCode)
             .ToListAsync();
 
-        var results = members
-            .Select(m => (m.Username, m.GuessedRight, m.GuessedWord, m.GameScore))
-            .OrderByDescending(m => m.GameScore)
+        var results = members.Select(m => new RoundResult
+            {
+                username = m.Username,
+                guessedRight = m.GuessedRight,
+                guessedWord = m.GuessedWord,
+                gameScore = m.GameScore
+            })
+            .OrderByDescending(r => r.gameScore)
             .ToList();
 
         bool nextRound = activeRoom.CurrentRound < activeRoom.Rounds;
 
-        foreach (var member in members)
-        {
-            member.Role = "Player";
-            member.GuessedRight = false;
-            member.GuessedWord = "";
-        }
-
         activeRoom.RoundEnded = false;
         activeRoom.RoundWord = null;
-    
+
+        foreach (var m in members)
+        {
+            m.Role = "Player";
+            m.GuessedRight = false;
+            m.GuessedWord = "";
+        }
+
         await _db.SaveChangesAsync();
 
         return (results, nextRound);

@@ -17,6 +17,5 @@ public interface IRoomManager
     Task<string> GetWord(string connectionId);
     Task<string> SendEmojis(string connectionId);
     Task<(bool isCorrect, string roomCode)> CheckWord(string connectionId, string word);
-    Task<(List<(string username, bool guessedRight, string? guessedWord, long gameScore)>, bool nextRound)>
-        GetResults(string connectionId);
+    Task<(List<RoundResult> results, bool nextRound)> GetResults(string connectionId);
 }
