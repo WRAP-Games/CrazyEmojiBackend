@@ -26,11 +26,11 @@ public sealed class ApiFixture : IAsyncLifetime
 
         await _container.StartAsync();
 
-        Environment.SetEnvironmentVariable("ConnectionStrings__Supabase", _container.GetConnectionString());
+        Environment.SetEnvironmentVariable("ConnectionStrings__DefaultConnection", _container.GetConnectionString());
 
         _factory = new ApiApplicationFactory();
         _httpClientProvider = new HttpClientProvider(_factory, RegisterPath, LoginPath, RefreshPath);
-        
+
         await MigrateDatabase();
     }
 
@@ -51,11 +51,7 @@ public sealed class ApiFixture : IAsyncLifetime
     {
         using var scope = _factory.Services.CreateScope();
 
-        await scope.ServiceProvider.GetRequiredService<IdentityDbContext>()
+        await scope.ServiceProvider.GetRequiredService<GameDbContext>()
             .Database.MigrateAsync();
-
-        // TODO: Enable when GameDbContext is properly set up
-        //await scope.ServiceProvider.GetRequiredService<GameDbContext>()
-        //    .Database.MigrateAsync();
     }
 }
