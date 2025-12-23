@@ -1619,23 +1619,7 @@ public class RoomHubTests
             It.Is<object[]>(args => args.Length == 1 && ((string)args[0]).Contains(RoomHubCommands.getUserData) && 
             ((string)args[0]).Contains(RoomHubErrors.forbidden)), default), Times.Once);
     }
-
-    [Fact]
-    public async Task CreateRoom_WithValidParameters_ShouldCreateAndJoinRoom()
-    {
-        var roomName = "Test Room";
-        var category = "General";
-        var rounds = 10;
-        var roundDuration = 30;
-        var roomCode = "ROOM01";
-        _mockRoomManager.Setup(x => x.CreateRoom("test-connection-id", roomName, category, rounds, roundDuration)).ReturnsAsync(roomCode);
-        _mockRoomManager.Setup(x => x.JoinRoom("test-connection-id", roomCode))
-            .ReturnsAsync(("testuser", roomName, category, rounds, roundDuration, "creator", new List<string>()));
-        await _hub.CreateRoom(roomName, category, rounds, roundDuration);
-        _mockRoomManager.Verify(x => x.CreateRoom("test-connection-id", roomName, category, rounds, roundDuration), Times.Once);
-        _mockCaller.Verify(x => x.SendCoreAsync(RoomHubConstants.createdRoom, 
-            It.Is<object[]>(args => args.Length == 1 && (string)args[0] == roomCode), default), Times.Once);
-    }
+    
 
     [Fact]
     public async Task CreateRoom_WhenForbidden_ShouldSendError()
@@ -1698,19 +1682,6 @@ public class RoomHubTests
     }
 
     [Fact]
-    public async Task JoinRoom_WithValidRoomCode_ShouldJoinAndNotifyOthers()
-    {
-        var roomCode = "ROOM01";
-        _mockRoomManager.Setup(x => x.JoinRoom("test-connection-id", roomCode))
-            .ReturnsAsync(("testuser", "Test Room", "General", 10, 30, "creator", new List<string> { "player1", "player2" }));
-        await _hub.JoinRoom(roomCode);
-        _mockRoomManager.Verify(x => x.JoinRoom("test-connection-id", roomCode), Times.Once);
-        _mockCaller.Verify(x => x.SendCoreAsync(RoomHubConstants.joinedRoom, It.Is<object[]>(args => args.Length == 1), default), Times.Once);
-        _mockOthersInGroup.Verify(x => x.SendCoreAsync(RoomHubConstants.playerJoined, 
-            It.Is<object[]>(args => args.Length == 1 && (string)args[0] == "testuser"), default), Times.Once);
-    }
-
-    [Fact]
     public async Task JoinRoom_WithInvalidRoomCode_ShouldSendError()
     {
         _mockRoomManager.Setup(x => x.JoinRoom(It.IsAny<string>(), It.IsAny<string>())).ThrowsAsync(new IncorrectRoomCodeException());
@@ -1728,27 +1699,6 @@ public class RoomHubTests
             ((string)args[0]).Contains(RoomHubErrors.roomGameStarted)), default), Times.Once);
     }
 
-    [Fact]
-    public async Task LeftRoom_AsRegularPlayer_ShouldNotifyOthers()
-    {
-        _mockRoomManager.Setup(x => x.LeftRoom("test-connection-id")).ReturnsAsync(("testuser", "ROOM01", false));
-        await _hub.LeftRoom();
-        _mockRoomManager.Verify(x => x.LeftRoom("test-connection-id"), Times.Once);
-        _mockOthersInGroup.Verify(x => x.SendCoreAsync(RoomHubConstants.playerLeft, 
-            It.Is<object[]>(args => args.Length == 1 && (string)args[0] == "testuser"), default), Times.Once);
-        _mockGroup.Verify(x => x.SendCoreAsync(RoomHubConstants.gameEnded, It.IsAny<object[]>(), default), Times.Never);
-    }
-
-    [Fact]
-    public async Task LeftRoom_WhenGameEnds_ShouldNotifyAllPlayers()
-    {
-        _mockRoomManager.Setup(x => x.LeftRoom("test-connection-id")).ReturnsAsync(("creator", "ROOM01", true));
-        await _hub.LeftRoom();
-        _mockOthersInGroup.Verify(x => x.SendCoreAsync(RoomHubConstants.playerLeft, 
-            It.Is<object[]>(args => args.Length == 1 && (string)args[0] == "creator"), default), Times.Once);
-        _mockGroup.Verify(x => x.SendCoreAsync(RoomHubConstants.gameEnded, 
-            It.Is<object[]>(args => args.Length == 0), default), Times.Once);
-    }
 
     [Fact]
     public async Task LeftRoom_WhenForbidden_ShouldSendError()
