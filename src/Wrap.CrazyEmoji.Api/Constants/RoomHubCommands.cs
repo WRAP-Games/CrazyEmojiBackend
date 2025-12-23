@@ -2,17 +2,16 @@ namespace Wrap.CrazyEmoji.Api.Constants;
 
 public static class RoomHubCommands
 {
-    public const string createUser = "createUser";
-    public const string loginUser = "loginUser";
-    public const string getCurrentUserData = "getCurrentUserData";
-    public const string getUserData = "getUserData";
-    public const string createRoom = "createRoom";
-    public const string joinRoom = "joinRoom";
-    public const string leftRoom = "leftRoom";
-    public const string startGame = "startGame";
-    public const string getCommander = "getCommander";
-    public const string getWord = "getWord";
-    public const string sendEmojis = "sendEmojis";
-    public const string checkWord = "checkWord";
-
+    public const string CreateUser = "createUser";
+    public const string LoginUser = "loginUser";
+    public const string GetCurrentUserData = "getCurrentUserData";
+    public const string GetUserData = "getUserData";
+    public const string CreateRoom = "createRoom";
+    public const string JoinRoom = "joinRoom";
+    public const string LeftRoom = "leftRoom";
+    public const string StartGame = "startGame";
+    public const string GetCommander = "getCommander";
+    public const string GetWord = "getWord";
+    public const string SendEmojis = "sendEmojis";
+    public const string CheckWord = "checkWord";
 }

@@ -14,22 +14,22 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             await _roomManager.CreateUser(Context.ConnectionId, username, password);
-            await Clients.Caller.SendAsync(RoomHubConstants.createdUser, username);
+            await Clients.Caller.SendAsync(RoomHubConstants.CreatedUser, username);
         }
         catch (InvalidUsernameException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createUser} {RoomHubErrors.incorrectUsername}");
+                $"{RoomHubCommands.CreateUser} {RoomHubErrors.IncorrectUsername}");
         }
         catch (InvalidPasswordException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createUser} {RoomHubErrors.incorrectPassword}");
+                $"{RoomHubCommands.CreateUser} {RoomHubErrors.IncorrectPassword}");
         }
         catch (UsernameTakenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createUser} {RoomHubErrors.usernameTaken}");
+                $"{RoomHubCommands.CreateUser} {RoomHubErrors.UsernameTaken}");
         }
 
     }
@@ -39,12 +39,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             await _roomManager.LoginUser(Context.ConnectionId, username, password);
-            await Clients.Caller.SendAsync(RoomHubConstants.userLoggedIn);
+            await Clients.Caller.SendAsync(RoomHubConstants.UserLoggedIn);
         }
         catch (InvalidUsernameException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.loginUser} {RoomHubErrors.incorrectUsernamePassword}");
+                $"{RoomHubCommands.LoginUser} {RoomHubErrors.IncorrectUsernamePassword}");
         }
     }
 
@@ -53,12 +53,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var (username, roomCode) = await _roomManager.GetCurrentUserDataAsync(Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.currentUserData, new { username, roomCode });
+            await Clients.Caller.SendAsync(RoomHubConstants.CurrentUserData, new { username, roomCode });
         }
         catch (InvalidConnectionIdException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.getCurrentUserData} {RoomHubErrors.incorrectConnectionId}");
+                $"{RoomHubCommands.GetCurrentUserData} {RoomHubErrors.IncorrectConnectionId}");
         }
     }
 
@@ -67,12 +67,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             await _roomManager.GetUserData(username, Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.userData, username);
+            await Clients.Caller.SendAsync(RoomHubConstants.UserData, username);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.getUserData} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.GetUserData} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -81,38 +81,38 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var roomCode = await _roomManager.CreateRoom(Context.ConnectionId, roomName, category, rounds, roundDuration);
-            await Clients.Caller.SendAsync(RoomHubConstants.createdRoom, roomCode);
+            await Clients.Caller.SendAsync(RoomHubConstants.CreatedRoom, roomCode);
             await JoinRoom(roomCode);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.Forbidden}");
         }
         catch (JoinedDifferentRoomException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.joinedDifferentRoom}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.JoinedDifferentRoom}");
         }
         catch (IncorrectRoomNameException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoomName}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.IncorrectRoomName}");
         }
         catch (IncorrectRoomCategoryException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoomCategory}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.IncorrectRoomCategory}");
         }
         catch (IncorrectRoundAmountException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoundAmount}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.IncorrectRoundAmount}");
         }
         catch (IncorrectRoundDurationException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.createRoom} {RoomHubErrors.incorrectRoundDuration}");
+                $"{RoomHubCommands.CreateRoom} {RoomHubErrors.IncorrectRoundDuration}");
         }
     }
 
@@ -122,28 +122,28 @@ public class RoomHub(IRoomManager roomManager) : Hub
         {
             var (username, roomName, category, rounds, roundDuration, roomCreator, players) = await _roomManager.JoinRoom(Context.ConnectionId, roomCode);
             await Groups.AddToGroupAsync(Context.ConnectionId, roomCode);
-            await Clients.Caller.SendAsync(RoomHubConstants.joinedRoom, new { roomName, category, rounds, roundDuration, roomCreator, players });
-            await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.playerJoined, username);
+            await Clients.Caller.SendAsync(RoomHubConstants.JoinedRoom, new { roomName, category, rounds, roundDuration, roomCreator, players });
+            await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.PlayerJoined, username);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.joinRoom} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.JoinRoom} {RoomHubErrors.Forbidden}");
         }
         catch (JoinedDifferentRoomException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.joinRoom} {RoomHubErrors.joinedDifferentRoom}");
+                $"{RoomHubCommands.JoinRoom} {RoomHubErrors.JoinedDifferentRoom}");
         }
         catch (IncorrectRoomCodeException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.joinRoom} {RoomHubErrors.incorrectRoomCode}");
+                $"{RoomHubCommands.JoinRoom} {RoomHubErrors.IncorrectRoomCode}");
         }
         catch (RoomGameStartedException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.joinRoom} {RoomHubErrors.roomGameStarted}");
+                $"{RoomHubCommands.JoinRoom} {RoomHubErrors.RoomGameStarted}");
         }
     }
 
@@ -153,16 +153,16 @@ public class RoomHub(IRoomManager roomManager) : Hub
         {
             var (username, roomCode, isGameEnded) = await _roomManager.LeftRoom(Context.ConnectionId);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, roomCode);
-            await Clients.Group(roomCode).SendAsync(RoomHubConstants.playerLeft, username);
+            await Clients.Group(roomCode).SendAsync(RoomHubConstants.PlayerLeft, username);
             if (isGameEnded)
             {
-                await Clients.Group(roomCode).SendAsync(RoomHubConstants.gameEnded);
+                await Clients.Group(roomCode).SendAsync(RoomHubConstants.GameEnded);
             }
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.leftRoom} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.LeftRoom} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -171,22 +171,22 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var roomCode = await _roomManager.StartGame(Context.ConnectionId);
-            await Clients.Group(roomCode).SendAsync(RoomHubConstants.gameStarted);
+            await Clients.Group(roomCode).SendAsync(RoomHubConstants.GameStarted);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.startGame} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.StartGame} {RoomHubErrors.Forbidden}");
         }
         catch (RoomGameStartedException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.startGame} {RoomHubErrors.roomGameStarted}");
+                $"{RoomHubCommands.StartGame} {RoomHubErrors.RoomGameStarted}");
         }
         catch (NotEnoughPlayersException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.startGame} {RoomHubErrors.notEnoughPlayers}");
+                $"{RoomHubCommands.StartGame} {RoomHubErrors.NotEnoughPlayers}");
         }
     }
 
@@ -195,12 +195,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var commanderUsername = await _roomManager.GetCommander(Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.commanderSelected, commanderUsername);
+            await Clients.Caller.SendAsync(RoomHubConstants.CommanderSelected, commanderUsername);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.getCommander} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.GetCommander} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -209,12 +209,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var word = await _roomManager.GetWord(Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.recivedWord, word);
+            await Clients.Caller.SendAsync(RoomHubConstants.RecivedWord, word);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.getWord} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.GetWord} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -223,13 +223,13 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var roomCode = await _roomManager.SendEmojis(Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.emojisRecieved);
-            await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.recieveEmojis, emojis);
+            await Clients.Caller.SendAsync(RoomHubConstants.EmojisRecieved);
+            await Clients.OthersInGroup(roomCode).SendAsync(RoomHubConstants.RecieveEmojis, emojis);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.sendEmojis} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.SendEmojis} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -238,12 +238,12 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var (isCorrect, roomCode) = await _roomManager.CheckWord(Context.ConnectionId, word);
-            await Clients.Caller.SendAsync(RoomHubConstants.wordChecked, isCorrect);
+            await Clients.Caller.SendAsync(RoomHubConstants.WordChecked, isCorrect);
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.checkWord} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.CheckWord} {RoomHubErrors.Forbidden}");
         }
     }
 
@@ -252,17 +252,17 @@ public class RoomHub(IRoomManager roomManager) : Hub
         try
         {
             var (results, nextRound) = await _roomManager.GetResults(Context.ConnectionId);
-            await Clients.Caller.SendAsync(RoomHubConstants.roundEnded, results);
+            await Clients.Caller.SendAsync(RoomHubConstants.RoundEnded, results);
             Task.Delay(1000).Wait();
             if (nextRound)
             {
-                await Clients.Caller.SendAsync(RoomHubConstants.roundStarted);
+                await Clients.Caller.SendAsync(RoomHubConstants.RoundStarted);
             }
         }
         catch (ForbiddenException)
         {
             await Clients.Caller.SendAsync(RoomHubConstants.Error,
-                $"{RoomHubCommands.checkWord} {RoomHubErrors.forbidden}");
+                $"{RoomHubCommands.CheckWord} {RoomHubErrors.Forbidden}");
         }
     }
 }
