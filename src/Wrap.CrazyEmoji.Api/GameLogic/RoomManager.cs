@@ -294,28 +294,34 @@ public class RoomManager : IRoomManager
         bool isGameEnded = false;
 
         var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
-        if (activeRoom.RoomCreator == user.Username && !activeRoom.GameStarted)
+        if (activeRoom == null)
         {
-            isGameEnded = true;
-        }
-
-        var playerCount = await _db.RoomMembers
-            .Where(rm => rm.RoomCode == roomMember.RoomCode)
-            .CountAsync();
-
-        if (playerCount < 3 && activeRoom.GameStarted)
-        {
-            isGameEnded = true;
+            throw new ForbiddenException();
         }
 
         _db.RoomMembers.Remove(roomMember);
         await _db.SaveChangesAsync();
 
+        var remainingPlayers = await _db.RoomMembers
+            .Where(rm => rm.RoomCode == roomMember.RoomCode)
+            .ToListAsync();
+
+        if (!activeRoom.GameStarted)
+        {
+            if (activeRoom.RoomCreator == user.Username)
+                isGameEnded = true;
+        }
+        else
+        {
+            if (remainingPlayers.Count < 3)
+                isGameEnded = true;
+        }
+
         if (isGameEnded)
         {
             _db.ActiveRooms.Remove(activeRoom);
-            var remainingMembers = _db.RoomMembers.Where(rm => rm.RoomCode == roomMember.RoomCode);
-            _db.RoomMembers.RemoveRange(remainingMembers);
+            _db.RoomMembers.RemoveRange(remainingPlayers);
+
             await _db.SaveChangesAsync();
         }
 
@@ -386,23 +392,33 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        var players = await _db.RoomMembers
-            .Where(rm => rm.RoomCode == roomMember.RoomCode)
+        var existingCommander = await _db.RoomMembers
+            .Where(rm => rm.RoomCode == activeRoom.RoomCode && rm.Role == "Commander")
             .Select(rm => rm.Username)
+            .FirstOrDefaultAsync();
+
+        if (existingCommander != null)
+        {
+            return existingCommander;
+        }
+
+        var players = await _db.RoomMembers
+            .Where(rm => rm.RoomCode == activeRoom.RoomCode)
             .ToListAsync();
 
-        int commanderIndex = RandomGenerator.Next(players.Count);
-        string commanderUsername = players[commanderIndex];
-        var commanderMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == commanderUsername && rm.RoomCode == roomMember.RoomCode);
-        commanderMember.Role = "Commander";
+        var commander = players[RandomGenerator.Next(players.Count)];
+
+        foreach (var p in players)
+        {
+            p.Role = p.Username == commander.Username ? "Commander" : "Player";
+        }
 
         activeRoom.EmojisSent = false;
-
         activeRoom.CurrentRound++;
 
         await _db.SaveChangesAsync();
 
-        return commanderUsername;
+        return commander.Username;
     }
 
     public async Task<string> GetWord(string connectionId)
