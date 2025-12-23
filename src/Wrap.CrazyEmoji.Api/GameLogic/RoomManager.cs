@@ -570,6 +570,19 @@ public class RoomManager(
             await db.SaveChangesAsync();
         }
 
+        if (!activeRoom.RoundEnded)
+        {
+            bool allPlayersGuessed = members
+                .Where(m => m.Role != "Commander")
+                .All(m => !string.IsNullOrEmpty(m.GuessedWord));
+
+            if (!allPlayersGuessed)
+                throw new ForbiddenException();
+
+            activeRoom.RoundEnded = true;
+            await _db.SaveChangesAsync();
+        }
+
         var results = members.Select(m => new RoundResult
         {
             username = m.Username,
