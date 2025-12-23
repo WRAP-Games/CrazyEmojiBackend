@@ -8,7 +8,6 @@ internal static class DatabaseBootstrap
     internal static IServiceCollection RegisterDatabase(this IServiceCollection services, IConfiguration configuration)
     {
         return services
-            .AddDbContext<GameDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")))
-            .AddDbContextFactory<GameDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
+            .AddDbContext<GameDbContext>(options => options.UseNpgsql(configuration.GetConnectionString("DefaultConnection")));
     }
 }

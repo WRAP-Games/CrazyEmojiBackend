@@ -21,7 +21,7 @@ try
         .AddExceptionHandler<GlobalExceptionHandler>()
         .AddProblemDetails()
         .AddOpenApi()
-        .AddSingleton<IRoomManager, RoomManager>()
+        .AddScoped<IRoomManager, RoomManager>()
         .RegisterMapster()
         .RegisterCors()
         .RegisterSignalR()

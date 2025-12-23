@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Text.RegularExpressions;
-using Microsoft.AspNetCore.SignalR;
+﻿using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Data;
@@ -8,34 +6,15 @@ using Wrap.CrazyEmoji.Api.GameLogic.Exceptions;
 
 namespace Wrap.CrazyEmoji.Api.GameLogic;
 
-public class RoomManager : IRoomManager
+public class RoomManager(
+    GameDbContext db,
+    IServiceScopeFactory scopeFactory,
+    IWordService wordService) : IRoomManager
 {
-    private readonly IHubContext<RoomHub> _hubContext;
-    private readonly IWordService _wordService;
-    private readonly ILogger<RoomManager> _logger;
-    private readonly ConcurrentDictionary<string, string> _currentWords = new();
-    private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
-    private readonly ConcurrentDictionary<string, int> _roomRounds = new();
-
-    private readonly IDbContextFactory<GameDbContext> _dbFactory;
     private static readonly Random RandomGenerator = Random.Shared;
-
-    public RoomManager(
-        IHubContext<RoomHub> hubContext,
-        ILogger<RoomManager> logger,
-        IDbContextFactory<GameDbContext> dbFactory,
-        IWordService wordService)
-    {
-        _hubContext = hubContext;
-        _logger = logger;
-        _dbFactory = dbFactory;
-        _wordService = wordService;
-    }
 
     public async Task CreateUser(string connectionId, string username, string password)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
         if (username.Length < 3 || username.Length > 32)
         {
             throw new InvalidUsernameException();
@@ -56,7 +35,7 @@ public class RoomManager : IRoomManager
             throw new InvalidPasswordException();
         }
 
-        var userExists = await _db.Users.AnyAsync(u => u.Username == username);
+        var userExists = await db.Users.AnyAsync(u => u.Username == username);
         if (userExists)
         {
             throw new UsernameTakenException();
@@ -69,35 +48,31 @@ public class RoomManager : IRoomManager
             ConnectionId = connectionId
         };
 
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        db.Users.Add(user);
+        await db.SaveChangesAsync();
     }
 
     public async Task LoginUser(string connectionId, string username, string password)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == password);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == password);
         if (user == null)
         {
             throw new InvalidUsernameException();
         }
 
         user.ConnectionId = connectionId;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 
     public async Task<(string username, string roomCode)> GetCurrentUserDataAsync(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new InvalidConnectionIdException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
 
         var roomCode = roomMember?.RoomCode ?? "-1";
 
@@ -106,27 +81,25 @@ public class RoomManager : IRoomManager
 
     public async Task GetUserData(string username, string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var userSend = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var userSend = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (userSend == null)
         {
             throw new ForbiddenException();
         }
 
-        var userGet = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+        var userGet = await db.Users.FirstOrDefaultAsync(u => u.Username == username);
         if (userGet == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMemberGet = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == userGet.Username);
+        var roomMemberGet = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == userGet.Username);
         if (roomMemberGet == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMemberSend = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == userSend.Username);
+        var roomMemberSend = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == userSend.Username);
         if (roomMemberSend == null)
         {
             throw new ForbiddenException();
@@ -141,15 +114,13 @@ public class RoomManager : IRoomManager
 
     public async Task<string> CreateRoom(string connectionId, string roomName, string category, int rounds, int roundDuration)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember != null)
         {
             throw new JoinedDifferentRoomException();
@@ -165,7 +136,7 @@ public class RoomManager : IRoomManager
             throw new IncorrectRoomNameException();
         }
 
-        var categorySet = await _db.Categories.FirstOrDefaultAsync(c => c.Name == category);
+        var categorySet = await db.Categories.FirstOrDefaultAsync(c => c.Name == category);
         if (categorySet == null)
         {
             throw new IncorrectRoomCategoryException();
@@ -181,7 +152,7 @@ public class RoomManager : IRoomManager
             throw new IncorrectRoundDurationException();
         }
 
-        var rooms = await _db.ActiveRooms
+        var rooms = await db.ActiveRooms
             .Select(ar => ar.RoomCode)
             .ToListAsync();
 
@@ -198,8 +169,8 @@ public class RoomManager : IRoomManager
             GameStarted = false
         };
 
-        _db.ActiveRooms.Add(activeRoom);
-        await _db.SaveChangesAsync();
+        db.ActiveRooms.Add(activeRoom);
+        await db.SaveChangesAsync();
 
         return roomCode;
     }
@@ -227,21 +198,19 @@ public class RoomManager : IRoomManager
 
     public async Task<(string username, string roomName, string category, int rounds, int roundDuration, string roomCreator, List<string> players)> JoinRoom(string connectionId, string roomCode)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var member = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var member = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (member != null)
         {
             throw new JoinedDifferentRoomException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
         if (activeRoom == null)
         {
             throw new IncorrectRoomCodeException();
@@ -260,12 +229,12 @@ public class RoomManager : IRoomManager
             GameScore = 0
         };
 
-        _db.RoomMembers.Add(roomMember);
-        await _db.SaveChangesAsync();
+        db.RoomMembers.Add(roomMember);
+        await db.SaveChangesAsync();
 
-        var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == activeRoom.CategoryId);
+        var category = await db.Categories.FirstOrDefaultAsync(c => c.Id == activeRoom.CategoryId);
 
-        var players = await _db.RoomMembers
+        var players = await db.RoomMembers
             .Where(rm => rm.RoomCode == roomCode)
             .Select(rm => rm.Username)
             .ToListAsync();
@@ -275,15 +244,13 @@ public class RoomManager : IRoomManager
 
     public async Task<(string username, string roomCode, bool isGameEnded)> LeftRoom(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
@@ -291,13 +258,13 @@ public class RoomManager : IRoomManager
 
         bool isGameEnded = false;
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (activeRoom.RoomCreator == user.Username && !activeRoom.GameStarted)
         {
             isGameEnded = true;
         }
 
-        var playerCount = await _db.RoomMembers
+        var playerCount = await db.RoomMembers
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
             .CountAsync();
 
@@ -306,15 +273,15 @@ public class RoomManager : IRoomManager
             isGameEnded = true;
         }
 
-        _db.RoomMembers.Remove(roomMember);
-        await _db.SaveChangesAsync();
+        db.RoomMembers.Remove(roomMember);
+        await db.SaveChangesAsync();
 
         if (isGameEnded)
         {
-            _db.ActiveRooms.Remove(activeRoom);
-            var remainingMembers = _db.RoomMembers.Where(rm => rm.RoomCode == roomMember.RoomCode);
-            _db.RoomMembers.RemoveRange(remainingMembers);
-            await _db.SaveChangesAsync();
+            db.ActiveRooms.Remove(activeRoom);
+            var remainingMembers = db.RoomMembers.Where(rm => rm.RoomCode == roomMember.RoomCode);
+            db.RoomMembers.RemoveRange(remainingMembers);
+            await db.SaveChangesAsync();
         }
 
         return (user.Username, roomMember.RoomCode, isGameEnded);
@@ -322,21 +289,19 @@ public class RoomManager : IRoomManager
 
     public async Task<string> StartGame(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (activeRoom.RoomCreator != user.Username)
         {
             throw new ForbiddenException();
@@ -347,7 +312,7 @@ public class RoomManager : IRoomManager
             throw new RoomGameStartedException();
         }
 
-        var playerCount = await _db.RoomMembers
+        var playerCount = await db.RoomMembers
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
             .CountAsync();
 
@@ -357,69 +322,65 @@ public class RoomManager : IRoomManager
         }
 
         activeRoom.GameStarted = true;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return activeRoom.RoomCode;
     }
 
     public async Task<string> GetCommander(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (!activeRoom.GameStarted)
         {
             throw new ForbiddenException();
         }
 
-        var players = await _db.RoomMembers
+        var players = await db.RoomMembers
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
             .Select(rm => rm.Username)
             .ToListAsync();
 
         int commanderIndex = RandomGenerator.Next(players.Count);
         string commanderUsername = players[commanderIndex];
-        var commanderMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == commanderUsername && rm.RoomCode == roomMember.RoomCode);
+        var commanderMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == commanderUsername && rm.RoomCode == roomMember.RoomCode);
         commanderMember.Role = "Commander";
 
         activeRoom.EmojisSent = false;
 
         activeRoom.CurrentRound++;
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return commanderUsername;
     }
 
     public async Task<string> GetWord(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (!activeRoom.GameStarted)
         {
             throw new ForbiddenException();
@@ -430,31 +391,29 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        var word = await _wordService.GetRandomWordAsync(activeRoom.CategoryId ?? 1);
+        var word = await wordService.GetRandomWordAsync(activeRoom.CategoryId ?? 1);
 
         activeRoom.RoundWord = word;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return word;
     }
 
     public async Task<string> SendEmojis(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (!activeRoom.GameStarted)
         {
             throw new ForbiddenException();
@@ -467,7 +426,7 @@ public class RoomManager : IRoomManager
 
         activeRoom.EmojisSent = true;
         activeRoom.EmojisSentTime = DateTime.Now;
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         StartRoundTimer(activeRoom.RoomCode);
 
@@ -476,21 +435,19 @@ public class RoomManager : IRoomManager
 
     public async Task<(bool isCorrect, string roomCode)> CheckWord(string connectionId, string word)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (!activeRoom.GameStarted)
         {
             throw new ForbiddenException();
@@ -521,7 +478,7 @@ public class RoomManager : IRoomManager
             roomMember.GameScore += 100;
         }
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return (isCorrect, roomMember.RoomCode);
     }
@@ -530,12 +487,13 @@ public class RoomManager : IRoomManager
     {
         Task.Run(async () =>
         {
-            await using var _db = await _dbFactory.CreateDbContextAsync();
-
             while (true)
             {
-                var room = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
-                if (room == null) break;
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var scopedDb = scope.ServiceProvider.GetRequiredService<GameDbContext>();
+
+                var room = await scopedDb.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+                if (room is null) break;
 
                 if (room.EmojisSentTime != null)
                 {
@@ -554,34 +512,33 @@ public class RoomManager : IRoomManager
 
     private async Task EndRoundAsync(string roomCode)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var scopedDb = scope.ServiceProvider.GetRequiredService<GameDbContext>();
 
-        var room = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
+        var room = await scopedDb.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomCode);
         if (room == null) return;
 
         room.RoundEnded = true;
 
         room.EmojisSentTime = null;
-        await _db.SaveChangesAsync();
+        await scopedDb.SaveChangesAsync();
     }
 
     public async Task<(List<RoundResult> results, bool nextRound)> GetResults(string connectionId)
     {
-        await using var _db = await _dbFactory.CreateDbContextAsync();
-
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ConnectionId == connectionId);
         if (user == null)
         {
             throw new ForbiddenException();
         }
 
-        var roomMember = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
+        var roomMember = await db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
         if (roomMember == null)
         {
             throw new ForbiddenException();
         }
 
-        var activeRoom = await _db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
+        var activeRoom = await db.ActiveRooms.FirstOrDefaultAsync(r => r.RoomCode == roomMember.RoomCode);
         if (!activeRoom.GameStarted)
         {
             throw new ForbiddenException();
@@ -592,7 +549,7 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        var members = await _db.RoomMembers
+        var members = await db.RoomMembers
             .Where(m => m.RoomCode == roomMember.RoomCode)
             .ToListAsync();
 
@@ -618,7 +575,7 @@ public class RoomManager : IRoomManager
             m.GuessedWord = "";
         }
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
 
         return (results, nextRound);
     }
