@@ -274,9 +274,9 @@ public class RoomManager(
 
         var remainingPlayers = await db.RoomMembers
             .Where(rm => rm.RoomCode == roomMember.RoomCode)
-            .ToListAsync();
+            .CountAsync();
 
-        if (!activeRoom.GameStarted)
+        if (playerCount < 3 && activeRoom.GameStarted)
         {
             if (activeRoom.RoomCreator == user.Username) isGameEnded = true;
         }
@@ -284,6 +284,9 @@ public class RoomManager(
         {
             if (remainingPlayers.Count < 3) isGameEnded = true;
         }
+
+        _db.RoomMembers.Remove(roomMember);
+        await _db.SaveChangesAsync();
 
         if (isGameEnded)
         {
@@ -371,12 +374,12 @@ public class RoomManager(
         commander.Role = "Commander";
         activeRoom.RoundWord = null;
         activeRoom.EmojisSent = false;
-        activeRoom.RoundEnded = false;
+
         activeRoom.CurrentRound++;
 
         await db.SaveChangesAsync();
 
-        return commander.Username;
+        return commanderUsername;
     }
 
     public async Task<string> GetWord(string connectionId)
@@ -559,12 +562,8 @@ public class RoomManager(
 
         if (!activeRoom.RoundEnded)
         {
-            bool allPlayersGuessed = members
-                .Where(m => m.Role != "Commander")
-                .All(m => !string.IsNullOrEmpty(m.GuessedWord));
-
-            if (!allPlayersGuessed)
-                throw new ForbiddenException();
+            throw new ForbiddenException();
+        }
 
             activeRoom.RoundEnded = true;
             await db.SaveChangesAsync();
@@ -584,22 +583,25 @@ public class RoomManager(
         }
 
         var results = members.Select(m => new RoundResult
-        {
-            username = m.Username,
-            guessedRight = m.GuessedRight,
-            guessedWord = m.GuessedWord,
-            gameScore = m.GameScore
-        })
-        .OrderByDescending(r => r.gameScore)
-        .ToList();
+            {
+                username = m.Username,
+                guessedRight = m.GuessedRight,
+                guessedWord = m.GuessedWord,
+                gameScore = m.GameScore
+            })
+            .OrderByDescending(r => r.gameScore)
+            .ToList();
 
         bool nextRound = activeRoom.CurrentRound < activeRoom.Rounds;
+
+        activeRoom.RoundEnded = false;
+        activeRoom.RoundWord = null;
 
         foreach (var m in members)
         {
             m.Role = "Player";
-            m.GuessedWord = null;
             m.GuessedRight = false;
+            m.GuessedWord = "";
         }
 
         await db.SaveChangesAsync();
