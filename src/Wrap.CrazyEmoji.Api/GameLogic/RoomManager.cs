@@ -11,7 +11,7 @@ namespace Wrap.CrazyEmoji.Api.GameLogic;
 public class RoomManager : IRoomManager
 {
     private readonly IHubContext<RoomHub> _hubContext;
-    private readonly IDbWordService _wordService;
+    private readonly IWordService _wordService;
     private readonly ILogger<RoomManager> _logger;
     private readonly ConcurrentDictionary<string, string> _currentWords = new();
     private readonly ConcurrentDictionary<string, bool> _emojisSent = new();
@@ -24,7 +24,7 @@ public class RoomManager : IRoomManager
         IHubContext<RoomHub> hubContext,
         ILogger<RoomManager> logger,
         IDbContextFactory<GameDbContext> dbFactory,
-        IDbWordService wordService)
+        IWordService wordService)
     {
         _hubContext = hubContext;
         _logger = logger;
@@ -186,8 +186,6 @@ public class RoomManager : IRoomManager
             .ToListAsync();
 
         var roomCode = GenerateUniqueRoomCode(rooms);
-
-        await _wordService.LoadWordsForRoomAsync(roomCode, categorySet.Id, rounds);
 
         var activeRoom = new Data.Entities.ActiveRoom
         {
@@ -432,7 +430,7 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        var word = _wordService.GetWord(roomMember.RoomCode);
+        var word = await _wordService.GetRandomWordAsync(activeRoom.CategoryId ?? 1);
 
         activeRoom.RoundWord = word;
         await _db.SaveChangesAsync();
@@ -528,7 +526,7 @@ public class RoomManager : IRoomManager
         return (isCorrect, roomMember.RoomCode);
     }
 
-    public void StartRoundTimer(string roomCode)
+    private void StartRoundTimer(string roomCode)
     {
         Task.Run(async () =>
         {
@@ -599,12 +597,12 @@ public class RoomManager : IRoomManager
             .ToListAsync();
 
         var results = members.Select(m => new RoundResult
-            {
-                username = m.Username,
-                guessedRight = m.GuessedRight,
-                guessedWord = m.GuessedWord,
-                gameScore = m.GameScore
-            })
+        {
+            username = m.Username,
+            guessedRight = m.GuessedRight,
+            guessedWord = m.GuessedWord,
+            gameScore = m.GameScore
+        })
             .OrderByDescending(r => r.gameScore)
             .ToList();
 
