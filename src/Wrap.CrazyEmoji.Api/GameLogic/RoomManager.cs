@@ -238,7 +238,7 @@ public class RoomManager : IRoomManager
         }
 
         var member = await _db.RoomMembers.FirstOrDefaultAsync(rm => rm.Username == user.Username);
-        if (member != null)
+        if (member != null && member.RoomCode != roomCode)
         {
             throw new JoinedDifferentRoomException();
         }
@@ -254,16 +254,19 @@ public class RoomManager : IRoomManager
             throw new RoomGameStartedException();
         }
 
-        var roomMember = new Data.Entities.RoomMember
+        if (member == null)
         {
-            RoomCode = roomCode,
-            Username = user.Username,
-            Role = "Player",
-            GameScore = 0
-        };
+            var roomMember = new Data.Entities.RoomMember
+            {
+                RoomCode = roomCode,
+                Username = user.Username,
+                Role = "Player",
+                GameScore = 0
+            };
 
-        _db.RoomMembers.Add(roomMember);
-        await _db.SaveChangesAsync();
+            _db.RoomMembers.Add(roomMember);
+            await _db.SaveChangesAsync();
+        }
 
         var category = await _db.Categories.FirstOrDefaultAsync(c => c.Id == activeRoom.CategoryId);
 
@@ -605,14 +608,21 @@ public class RoomManager : IRoomManager
             throw new ForbiddenException();
         }
 
-        if (!activeRoom.RoundEnded)
-        {
-            throw new ForbiddenException();
-        }
-
         var members = await _db.RoomMembers
             .Where(m => m.RoomCode == roomMember.RoomCode)
             .ToListAsync();
+
+        if (!activeRoom.RoundEnded)
+        {
+            bool allPlayersGuessed = members
+                .Where(m => m.Role != "Commander")
+                .All(m => !string.IsNullOrEmpty(m.GuessedWord));
+
+            if (!allPlayersGuessed)
+                throw new ForbiddenException();
+
+            activeRoom.RoundEnded = true;
+        }
 
         var results = members.Select(m => new RoundResult
             {
