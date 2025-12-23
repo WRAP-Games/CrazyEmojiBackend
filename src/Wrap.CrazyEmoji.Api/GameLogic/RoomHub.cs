@@ -253,7 +253,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
         {
             var (results, nextRound) = await _roomManager.GetResults(Context.ConnectionId);
             await Clients.Caller.SendAsync(RoomHubConstants.roundEnded, results);
-            Task.Delay(10000).Wait();
+            Task.Delay(1000).Wait();
             if (nextRound)
             {
                 await Clients.Caller.SendAsync(RoomHubConstants.roundStarted);
