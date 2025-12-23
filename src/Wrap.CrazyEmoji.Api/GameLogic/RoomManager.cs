@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Data;
@@ -9,7 +10,8 @@ namespace Wrap.CrazyEmoji.Api.GameLogic;
 public class RoomManager(
     GameDbContext db,
     IServiceScopeFactory scopeFactory,
-    IWordService wordService) : IRoomManager
+    IWordService wordService,
+    IPasswordHasher<Data.Entities.User> hasher) : IRoomManager
 {
     private static readonly Random RandomGenerator = Random.Shared;
 
@@ -44,9 +46,9 @@ public class RoomManager(
         var user = new Data.Entities.User
         {
             Username = username,
-            Password = password,
             ConnectionId = connectionId
         };
+        user.Password = hasher.HashPassword(user, password);
 
         db.Users.Add(user);
         await db.SaveChangesAsync();
@@ -54,10 +56,13 @@ public class RoomManager(
 
     public async Task LoginUser(string connectionId, string username, string password)
     {
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username && u.Password == password);
-        if (user == null)
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Username == username)
+            ?? throw new InvalidUsernameException();
+
+        var result = hasher.VerifyHashedPassword(user, user.Password, password);
+        if (result == PasswordVerificationResult.Failed)
         {
-            throw new InvalidUsernameException();
+            throw new InvalidPasswordException();
         }
 
         user.ConnectionId = connectionId;

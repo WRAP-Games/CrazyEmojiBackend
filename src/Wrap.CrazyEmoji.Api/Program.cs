@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Microsoft.AspNetCore.Identity;
 using Serilog;
 using Wrap.CrazyEmoji.Api.Abstractions;
 using Wrap.CrazyEmoji.Api.Bootstraps;
@@ -22,12 +23,12 @@ try
         .AddProblemDetails()
         .AddOpenApi()
         .AddScoped<IRoomManager, RoomManager>()
+        .AddDbWordService()
+        .AddScoped<IPasswordHasher<Wrap.CrazyEmoji.Api.Data.Entities.User>, PasswordHasher<Wrap.CrazyEmoji.Api.Data.Entities.User>>()
         .RegisterMapster()
         .RegisterCors()
         .RegisterSignalR()
         .AddControllers();
-
-    builder.Services.AddDbWordService();
 
     var app = builder.Build();
 

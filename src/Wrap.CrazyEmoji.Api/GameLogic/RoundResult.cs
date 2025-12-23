@@ -1,3 +1,5 @@
+namespace Wrap.CrazyEmoji.Api.GameLogic;
+
 public class RoundResult
 {
     public string username { get; set; }
