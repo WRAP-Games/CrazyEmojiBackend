@@ -1,3 +1,5 @@
+using Wrap.CrazyEmoji.Api.GameLogic;
+
 namespace Wrap.CrazyEmoji.Api.Abstractions;
 
 public interface IRoomManager

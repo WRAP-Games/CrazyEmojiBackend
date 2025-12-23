@@ -55,7 +55,7 @@ The game supports multiple categories, leaderboards, and player profiles, making
 
 1. **Backend**: ASP.NET
 2. **FrontEnd**: Angular + TypeScript
-3. **Database**: MySql
+3. **Database**: PostgreSQL
 
 ---
 

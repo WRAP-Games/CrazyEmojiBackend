@@ -25,4 +25,8 @@
 		<ProjectReference Include="..\..\src\Wrap.CrazyEmoji.Shared\Wrap.CrazyEmoji.Shared.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Hubs\" />
+	</ItemGroup>
+
 </Project>
