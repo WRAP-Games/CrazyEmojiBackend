@@ -757,7 +757,6 @@ public sealed class RoomManagerTests
     [Fact]
     public async Task GetResults_WhenRoundNotEnded_ReturnsOrderedResultsAndDoesNotResetRoundState()
     {
-        // Arrange
         await using var db = CreateDb();
         db.Users.Add(new User { Username = "u1", ConnectionId = "c1", Password = "x" });
         db.ActiveRooms.Add(new ActiveRoom
@@ -779,10 +778,8 @@ public sealed class RoomManagerTests
 
         var sut = CreateSut(db);
 
-        // Act
         var (results, nextRound) = await sut.GetResults("c1");
 
-        // Assert
         results.Count.ShouldBe(3);
         results[0].username.ShouldBe("u2");
 

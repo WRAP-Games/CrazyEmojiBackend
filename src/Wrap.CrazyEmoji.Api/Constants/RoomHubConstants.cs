@@ -15,7 +15,7 @@ public static class RoomHubConstants
     public const string CommanderSelected = "commanderSelected";
     public const string RecivedWord = "recivedWord";
     public const string EmojisRecieved = "emojisRecieved";
-    public const string RecieveEmojis = "recievedEmojis";
+    public const string RecieveEmojis = "recieveEmojis";
     public const string WordChecked = "wordChecked";
     public const string RoundEnded = "roundEnded";
     public const string RoundStarted = "roundStarted";
