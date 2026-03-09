@@ -218,7 +218,7 @@ public class RoomHub(IRoomManager roomManager) : Hub
         }
     }
 
-    public async Task SendEmojis(List<string> emojis)
+    public async Task SendEmojis(string emojis)
     {
         try
         {
