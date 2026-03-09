@@ -9,6 +9,10 @@ internal sealed class ApiApplicationFactory : WebApplicationFactory<Program>
     {
         builder
             .UseEnvironment(GetEnvironment());
+        //.ConfigureLogging(logging =>
+        //{
+        //    logging.ClearProviders();
+        //});
     }
 
     private static string GetEnvironment()
@@ -17,7 +21,7 @@ internal sealed class ApiApplicationFactory : WebApplicationFactory<Program>
 
         if (string.IsNullOrWhiteSpace(environment))
         {
-            environment = "Development";
+            environment = "Local";
         }
 
         return environment;
