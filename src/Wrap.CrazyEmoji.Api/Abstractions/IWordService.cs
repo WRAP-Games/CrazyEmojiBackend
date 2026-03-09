@@ -2,5 +2,6 @@
 
 public interface IWordService
 {
-    Task<string> GetRandomWordAsync(long categoryId);
+    Task<string> GetRandomWordAsync();
+    Task LoadWordsAsync(Stream wordStream);
 }
