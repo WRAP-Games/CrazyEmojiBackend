@@ -24,4 +24,10 @@ public partial class User
 
     [InverseProperty("UsernameNavigation")]
     public virtual ICollection<RoomMember> RoomMembers { get; set; } = new List<RoomMember>();
+
+    [InverseProperty("UserANavigation")]
+    public virtual ICollection<Friendship> FriendshipsInitiated { get; set; } = new List<Friendship>();
+
+    [InverseProperty("UserBNavigation")]
+    public virtual ICollection<Friendship> FriendshipsReceived { get; set; } = new List<Friendship>();
 }

@@ -28,6 +28,8 @@ try
         .RegisterSignalR()
         .AddControllers();
 
+    builder.Services.AddHostedService<Wrap.CrazyEmoji.Api.Services.FriendshipSchemaInitializer>();
+
     builder.Services.AddDbWordService();
 
     var app = builder.Build();
