@@ -30,4 +30,10 @@ public partial class User
 
     [InverseProperty("UserBNavigation")]
     public virtual ICollection<Friendship> FriendshipsReceived { get; set; } = new List<Friendship>();
+
+    [InverseProperty("FromUserNavigation")]
+    public virtual ICollection<FriendRequest> SentFriendRequests { get; set; } = new List<FriendRequest>();
+
+    [InverseProperty("ToUserNavigation")]
+    public virtual ICollection<FriendRequest> ReceivedFriendRequests { get; set; } = new List<FriendRequest>();
 }

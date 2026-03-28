@@ -22,6 +22,8 @@ public partial class GameDbContext : DbContext
 
     public virtual DbSet<Friendship> Friendships { get; set; }
 
+    public virtual DbSet<FriendRequest> FriendRequests { get; set; }
+
     public virtual DbSet<Category> Categories { get; set; }
 
     public virtual DbSet<Word> Words { get; set; }
@@ -91,7 +93,6 @@ public partial class GameDbContext : DbContext
                 .UseIdentityAlwaysColumn();
         });
 
-
         modelBuilder.Entity<Friendship>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("Friendship_pkey");
@@ -113,6 +114,31 @@ public partial class GameDbContext : DbContext
             entity.HasOne(d => d.UserBNavigation)
                 .WithMany(p => p.FriendshipsReceived)
                 .HasForeignKey(d => d.UserBUsername)
+                .HasPrincipalKey(p => p.Username)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FriendRequest>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("FriendRequest_pkey");
+
+            entity.Property(e => e.Id)
+                .ValueGeneratedOnAdd()
+                .UseIdentityAlwaysColumn();
+
+            entity.Property(e => e.CreatedAtUtc)
+                .HasColumnType("timestamp with time zone")
+                .HasDefaultValueSql("NOW()");
+
+            entity.HasOne(d => d.FromUserNavigation)
+                .WithMany(p => p.SentFriendRequests)
+                .HasForeignKey(d => d.FromUsername)
+                .HasPrincipalKey(p => p.Username)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.ToUserNavigation)
+                .WithMany(p => p.ReceivedFriendRequests)
+                .HasForeignKey(d => d.ToUsername)
                 .HasPrincipalKey(p => p.Username)
                 .OnDelete(DeleteBehavior.Cascade);
         });

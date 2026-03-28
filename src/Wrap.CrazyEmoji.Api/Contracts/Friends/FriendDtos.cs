@@ -9,6 +9,11 @@ public record FriendDto(
     string? CurrentRoomName,
     DateTime FriendsSinceUtc);
 
+public record FriendRequestDto(
+    string Username,
+    bool IsOnline,
+    DateTime RequestedAtUtc);
+
 public record FriendProfileDto(
     string Username,
     bool IsOnline,
